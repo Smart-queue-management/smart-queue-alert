@@ -18,6 +18,9 @@ export function PatientRegistrationScreen() {
         setState(prev => ({ ...prev, currentView: 'portal' }));
     };
 
+    // Explicitly using Localhost backend URL as specified
+    const BACKEND_URL = 'http://127.0.0.1:5000';
+
     const validatePhone = (p) => {
         const phoneRegex = /^[+]?[\d\s\-\(\)]{10,}$/;
         return phoneRegex.test(p.replace(/\s/g, ''));
@@ -39,21 +42,41 @@ export function PatientRegistrationScreen() {
         const formattedPhone = phone.startsWith('+') ? phone : `+91${phone}`;
 
         try {
-            const { error } = await supabase.auth.signInWithOtp({
-                phone: formattedPhone
+            const res = await fetch(`${BACKEND_URL}/send-otp`, {
+                method: "POST",
+                headers: { 
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ phone: formattedPhone })
             });
 
-            if (error) throw error;
+            if (!res.ok) {
+                toast.error('Failed to send OTP');
+                setLoading(false);
+                return;
+            }
 
-            toast.success('OTP sent to your mobile number');
+            const data = await res.json();
+            if (!data.success) {
+                toast.error('Failed to send OTP');
+                setLoading(false);
+                return;
+            }
+
+            // If SMS gateway was offline, backend returns the OTP directly
+            if (data.otp) {
+                toast.success(`Your OTP is: ${data.otp}`, { duration: 15000 });
+            } else {
+                toast.success('OTP sent to your phone!');
+            }
             setState(prev => ({
                 ...prev,
                 pendingRegistrationPhone: formattedPhone,
                 currentView: 'otp-verification'
             }));
-        } catch (error) {
-            console.error('OTP Send Error:', error);
-            toast.error(error.message || 'Failed to send OTP. Please try again.');
+        } catch (err) {
+            toast.error('Server unavailable');
+            console.error('Server unavailable:', err);
         } finally {
             setLoading(false);
         }

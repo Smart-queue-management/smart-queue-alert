@@ -1,4 +1,4 @@
-var _interopRequireDefault = require("@babel/runtime/helpers/interopRequireDefault"); Object.defineProperty(exports, "__esModule", { value: true }); exports.CommonUserFlow = CommonUserFlow; var _toConsumableArray2 = _interopRequireDefault(require("@babel/runtime/helpers/toConsumableArray")); var _asyncToGenerator2 = _interopRequireDefault(require("@babel/runtime/helpers/asyncToGenerator")); var _slicedToArray2 = _interopRequireDefault(require("@babel/runtime/helpers/slicedToArray")); var _react = _interopRequireWildcard(require("react"));
+var _interopRequireDefault = require("@babel/runtime/helpers/interopRequireDefault"); Object.defineProperty(exports, "__esModule", { value: true }); exports.CommonUserFlow = CommonUserFlow; var _toConsumableArray2 = _interopRequireDefault(require("@babel/runtime/helpers/toConsumableArray")); var _slicedToArray2 = _interopRequireDefault(require("@babel/runtime/helpers/slicedToArray")); var _react = _interopRequireWildcard(require("react"));
 var _reactNative = require("react-native");
 var _AppContext = require("../context/AppContext");
 var _useTranslation = require("../hooks/useTranslation");
@@ -11,7 +11,6 @@ var _select = require("./ui/select");
 var _badge = require("./ui/badge");
 var _lucideReactNative = require("lucide-react-native"); var _jsxRuntime = require("react/jsx-runtime"); function _interopRequireWildcard(e, t) { if ("function" == typeof WeakMap) var r = new WeakMap(), n = new WeakMap(); return (_interopRequireWildcard = function _interopRequireWildcard(e, t) { if (!t && e && e.__esModule) return e; var o, i, f = { __proto__: null, default: e }; if (null === e || "object" != typeof e && "function" != typeof e) return f; if (o = t ? n : r) { if (o.has(e)) return o.get(e); o.set(e, f); } for (var _t in e) "default" !== _t && {}.hasOwnProperty.call(e, _t) && ((i = (o = Object.defineProperty) && Object.getOwnPropertyDescriptor(e, _t)) && (i.get || i.set) ? o(f, _t, i) : f[_t] = e[_t]); return f; })(e, t); }
 // Assuming sonner is being used via some native equivalent or we can just use Alert
-var _supabaseClient = require("../services/supabaseClient");
 
 var manualTimeSlots = [
     { time: '09:00', label: '9:00 AM', crowdLevel: 'Low', color: '#16a34a' },
@@ -134,37 +133,56 @@ function CommonUserFlow() {
         };
     };
 
-    var handleTokenGeneration = /*#__PURE__*/function () {
-        var _ref = (0, _asyncToGenerator2.default)(function* () {
-            if (formData.schedulingMethod === 'manual' && !formData.timeSlot) {
-                return;
-            }
-            try {
-                var newToken = generateToken();
-                // 1. Insert into Supabase logic
-                yield _supabaseClient.supabase.from('queue').insert([{
-                    token_id: newToken.id,
-                    patient_name: newToken.patient.name,
-                    department: newToken.primaryDepartment,
-                    doctor_id: formData.assignedDoctor || null,
-                    status: 'waiting'
-                }]);
-                
-                // 2. Local State fallback (realtime handles other clients, this ensures instantly loaded UI here)
-                setState(function (prev) {
-                    return Object.assign({},
-                        prev, {
-                        tokens: [].concat((0, _toConsumableArray2.default)(prev.tokens), [newToken]),
-                        currentToken: newToken,
-                        currentView: 'token'
+    var handleTokenGeneration = function handleTokenGeneration() {
+        if (formData.schedulingMethod === 'manual' && !formData.timeSlot) {
+            return;
+        }
+        try {
+            var newToken = generateToken();
+            var _supabaseClient = require("../services/supabaseClient");
+            const deptObj = state.departments.find(d => d.name === formData.primaryDepartment);
+            const deptId = deptObj ? deptObj.id : 'gen_med';
+            
+            _supabaseClient.supabase.from('queue').insert({
+                token_id: newToken.id,
+                patient_name: newToken.patient.name,
+                doctor_id: (formData.assignedDoctor && formData.assignedDoctor !== 'any') ? formData.assignedDoctor : null,
+                status: 'waiting',
+                department: formData.primaryDepartment,
+                patient_phone: formData.isAssisted ? (formData.phone || '') : (state.patientInfo.phone || ''),
+                patient_age: formData.isAssisted ? parseInt(formData.age || '0') : null,
+                patient_gender: formData.isAssisted ? formData.gender : null,
+                booking_type: formData.isAssisted ? 'assisted' : 'self',
+                token_data: newToken
+            }).then(function(res) {
+                if (res.error) {
+                    console.error("Supabase insert error:", res.error);
+                } else {
+                    _supabaseClient.supabase.from('queue_visits').insert({
+                        token_id: newToken.id,
+                        department_id: deptId,
+                        doctor_id: (formData.assignedDoctor && formData.assignedDoctor !== 'any') ? formData.assignedDoctor : null,
+                        status: 'waiting',
+                        sequence_order: 1
+                    }).then(function(vRes) {
+                        if (vRes.error) console.error("Supabase insert queue_visits error:", vRes.error);
                     });
                 }
-                );
-            } catch (error) {
-                console.log(error);
+            });
+
+            setState(function (prev) {
+                return Object.assign({},
+                    prev, {
+                    tokens: [].concat((0, _toConsumableArray2.default)(prev.tokens), [newToken]),
+                    currentToken: newToken,
+                    currentView: 'token'
+                });
             }
-        }); return function handleTokenGeneration() { return _ref.apply(this, arguments); };
-    }();
+            );
+        } catch (error) {
+            console.log(error);
+        }
+    };
 
     if (!state.patientInfo) return null;
 

@@ -6,7 +6,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { ShieldCheck, ArrowLeft } from 'lucide-react-native';
 import { toast } from 'sonner-native';
 import { useAppContext } from '../context/AppContext';
-import { supabase } from '../services/supabaseClient';
 import { OTPInput } from '../components/OTPInput';
 
 export function OTPVerificationScreen() {
@@ -16,6 +15,7 @@ export function OTPVerificationScreen() {
     const [otpError, setOtpError] = useState(false);
 
     const phone = state.pendingRegistrationPhone || '';
+    const BACKEND_URL = 'http://127.0.0.1:5000';
 
     const handleBack = () => {
         setState(prev => ({ ...prev, currentView: 'portal' }));
@@ -24,14 +24,33 @@ export function OTPVerificationScreen() {
     const handleResendOtp = async () => {
         setLoading(true);
         try {
-            const { error } = await supabase.auth.signInWithOtp({ phone });
-            if (error) throw error;
+            const res = await fetch(`${BACKEND_URL}/send-otp`, {
+                method: "POST",
+                headers: { 
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ phone })
+            });
+
+            if (!res.ok) {
+                toast.error('Failed to send OTP');
+                setLoading(false);
+                return;
+            }
+
+            const data = await res.json();
+            if (!data.success) {
+                toast.error('Failed to send OTP');
+                setLoading(false);
+                return;
+            }
+
             setOtp(['', '', '', '', '', '']);
             setOtpError(false);
             toast.success('New OTP sent successfully');
         } catch (error) {
             console.error('Resend OTP Error:', error);
-            toast.error(error.message || 'Failed to resend OTP.');
+            toast.error('Server unavailable');
         } finally {
             setLoading(false);
         }
@@ -49,25 +68,30 @@ export function OTPVerificationScreen() {
         setOtpError(false);
 
         try {
-            // 1. Verify OTP with Supabase Auth
-            const { data: authData, error: authError } = await supabase.auth.verifyOtp({
-                phone,
-                token: otpValue,
-                type: 'sms'
+            // 1. Verify OTP with Custom API
+            const res = await fetch(`${BACKEND_URL}/verify-otp`, {
+                method: "POST",
+                headers: { 
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ phone, otp: otpValue })
             });
 
-            if (authError || !authData.session) {
-                console.error("Auth Error:", authError);
-                throw new Error("Invalid OTP or verification failed.");
+            if (!res.ok) {
+                throw new Error('Server unavailable');
             }
 
-            const userId = authData.user.id;
+            const data = await res.json();
+            if (!data.success) {
+                console.error("Auth Error:", data);
+                throw new Error("Failed to verify OTP");
+            }
 
             // 2. Check if patient exists, otherwise insert into `patients` table
             const { data: existingPatient, error: selectError } = await supabase
                 .from('patients')
                 .select('*')
-                .eq('id', userId)
+                .eq('phone_number', phone)
                 .single();
 
             if (selectError && selectError.code !== 'PGRST116') { // PGRST116 means no rows found
@@ -79,7 +103,6 @@ export function OTPVerificationScreen() {
                 const { error: insertError } = await supabase
                     .from('patients')
                     .insert([{
-                        id: userId,
                         phone_number: phone
                     }]);
 
@@ -101,11 +124,10 @@ export function OTPVerificationScreen() {
             }));
 
             toast.success('OTP Verified Successfully');
-
         } catch (error) {
             console.error('Verify OTP Error:', error);
             setOtpError(true);
-            toast.error(error.message || 'Invalid OTP. Please try again.');
+            toast.error(error.message === 'Server unavailable' ? 'Server unavailable' : 'Failed to verify OTP');
         } finally {
             setLoading(false);
         }

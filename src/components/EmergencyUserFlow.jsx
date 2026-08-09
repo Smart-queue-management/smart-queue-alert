@@ -1,4 +1,4 @@
-var _interopRequireDefault = require("@babel/runtime/helpers/interopRequireDefault"); Object.defineProperty(exports, "__esModule", { value: true }); exports.EmergencyUserFlow = EmergencyUserFlow; var _toConsumableArray2 = _interopRequireDefault(require("@babel/runtime/helpers/toConsumableArray")); var _asyncToGenerator2 = _interopRequireDefault(require("@babel/runtime/helpers/asyncToGenerator")); var _slicedToArray2 = _interopRequireDefault(require("@babel/runtime/helpers/slicedToArray")); var _react = _interopRequireWildcard(require("react"));
+var _interopRequireDefault = require("@babel/runtime/helpers/interopRequireDefault"); Object.defineProperty(exports, "__esModule", { value: true }); exports.EmergencyUserFlow = EmergencyUserFlow; var _toConsumableArray2 = _interopRequireDefault(require("@babel/runtime/helpers/toConsumableArray")); var _slicedToArray2 = _interopRequireDefault(require("@babel/runtime/helpers/slicedToArray")); var _react = _interopRequireWildcard(require("react"));
 var _reactNative = require("react-native");
 var _AppContext = require("../context/AppContext");
 
@@ -12,7 +12,6 @@ var _radioGroup = require("./ui/radio-group");
 var _checkbox = require("./ui/checkbox");
 var _lucideReactNative = require("lucide-react-native"); var _jsxRuntime = require("react/jsx-runtime"); function _interopRequireWildcard(e, t) { if ("function" == typeof WeakMap) var r = new WeakMap(), n = new WeakMap(); return (_interopRequireWildcard = function _interopRequireWildcard(e, t) { if (!t && e && e.__esModule) return e; var o, i, f = { __proto__: null, default: e }; if (null === e || "object" != typeof e && "function" != typeof e) return f; if (o = t ? n : r) { if (o.has(e)) return o.get(e); o.set(e, f); } for (var _t in e) "default" !== _t && {}.hasOwnProperty.call(e, _t) && ((i = (o = Object.defineProperty) && Object.getOwnPropertyDescriptor(e, _t)) && (i.get || i.set) ? o(f, _t, i) : f[_t] = e[_t]); return f; })(e, t); }
 // Use mock or native equivalent
-var _supabaseClient = require("../services/supabaseClient");
 
 var disabilityTypes = [
     { value: 'mobility', label: 'Mobility Impairment', icon: _lucideReactNative.User },
@@ -131,46 +130,65 @@ function EmergencyUserFlow() {
         };
     };
 
-    var handleFormSubmit = /*#__PURE__*/function () {
-        var _ref = (0, _asyncToGenerator2.default)(function* () {
-            if (!state.patientInfo) return;
-            if (!formData.age || !formData.gender || !formData.primaryDepartment || !formData.emergencyReason) {
-                console.log('Please fill all required fields');
-                return;
-            }
-            if (state.emergencyCount >= state.maxEmergencyPerDay) {
-                console.log('Emergency limit reached');
-                return;
-            }
-            
-            try {
-                var newToken = generateEmergencyToken();
-                sendEmergencyNotification(formData.primaryDepartment);
-                
-                // Insert into Supabase logic
-                yield _supabaseClient.supabase.from('queue').insert([{
-                    token_id: newToken.id,
-                    patient_name: newToken.patient.name,
-                    department: newToken.primaryDepartment,
-                    doctor_id: formData.assignedDoctor || null,
-                    status: 'waiting'
-                }]);
-                
-                setState(function (prev) {
-                    return Object.assign({},
-                        prev, {
-                        tokens: [].concat((0, _toConsumableArray2.default)(prev.tokens), [newToken]),
-                        currentToken: newToken,
-                        currentView: 'token',
-                        emergencyCount: prev.emergencyCount + 1
+    var handleFormSubmit = function handleFormSubmit() {
+        if (!state.patientInfo) return;
+        if (!formData.age || !formData.gender || !formData.primaryDepartment || !formData.emergencyReason) {
+            console.log('Please fill all required fields');
+            return;
+        }
+        if (state.emergencyCount >= state.maxEmergencyPerDay) {
+            console.log('Emergency limit reached');
+            return;
+        }
+
+        try {
+            var newToken = generateEmergencyToken();
+            var _supabaseClient = require("../services/supabaseClient");
+            const deptObj = state.departments.find(d => d.name === formData.primaryDepartment);
+            const deptId = deptObj ? deptObj.id : 'gen_med';
+
+            _supabaseClient.supabase.from('queue').insert({
+                token_id: newToken.id,
+                patient_name: newToken.patient.name,
+                doctor_id: (formData.assignedDoctor && formData.assignedDoctor !== 'any') ? formData.assignedDoctor : null,
+                status: 'waiting',
+                department: formData.primaryDepartment,
+                patient_phone: formData.isAssisted ? (formData.phone || '') : (state.patientInfo.phone || ''),
+                patient_age: parseInt(formData.age || '0'),
+                patient_gender: formData.gender || 'not specified',
+                booking_type: formData.isAssisted ? 'assisted' : 'self',
+                token_data: newToken
+            }).then(function(res) {
+                if (res.error) {
+                    console.error("Supabase insert error:", res.error);
+                } else {
+                    _supabaseClient.supabase.from('queue_visits').insert({
+                        token_id: newToken.id,
+                        department_id: deptId,
+                        doctor_id: (formData.assignedDoctor && formData.assignedDoctor !== 'any') ? formData.assignedDoctor : null,
+                        status: 'waiting',
+                        sequence_order: 1
+                    }).then(function(vRes) {
+                        if (vRes.error) console.error("Supabase insert queue_visits error:", vRes.error);
                     });
                 }
-                );
-            } catch (error) {
-                console.log(error);
+            });
+            sendEmergencyNotification(formData.primaryDepartment);
+
+            setState(function (prev) {
+                return Object.assign({},
+                    prev, {
+                    tokens: [].concat((0, _toConsumableArray2.default)(prev.tokens), [newToken]),
+                    currentToken: newToken,
+                    currentView: 'token',
+                    emergencyCount: prev.emergencyCount + 1
+                });
             }
-        }); return function handleFormSubmit() { return _ref.apply(this, arguments); };
-    }();
+            );
+        } catch (error) {
+            console.log(error);
+        }
+    };
 
     var remainingEmergency = state.maxEmergencyPerDay - state.emergencyCount;
     var selectedDepartment = state.departments.find(function (d) { return d.name === formData.primaryDepartment; });

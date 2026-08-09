@@ -286,9 +286,12 @@ Phone OTP authentication is configured through Supabase with Twilio as the SMS p
 
 ---
 
+## 📄 License
+
+This project is open source and available under the [MIT License](LICENSE).
 
 ---
 
 <p align="center">
-   SAM
+   
 </p>
