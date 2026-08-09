@@ -1,0 +1,67 @@
+﻿npx : Retrieving 
+projectΓÇª
+At line:1 char:1
++ npx vercel deploy --yes 
+--public dist 2>&1 | 
+ForEach-Object { $_ } |  
+...
++ ~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~
+    + CategoryInfo        
+      : NotSpecified: (R  
+  etrieving projectΓÇª:   
+ String) [], RemoteExc    
+eption
+    + FullyQualifiedError 
+   Id : NativeCommandErr  
+  or
+ 
+Deploying samiyamohd19s-pr
+ojects/dist
+Inspect: https://vercel.co
+m/samiyamohd19s-projects/d
+ist/EYoFD427AeduYCPFvagN7N
+DQ5v8r [2s]
+Preview: https://dist-fa3y
+9cdfu-samiyamohd19s-projec
+ts.vercel.app [2s]
+Building...
+Building...
+Building: Running build 
+in Washington, D.C., USA 
+(East) ΓÇô iad1
+Building: Build machine 
+configuration: 2 cores, 8 
+GB
+Building: Retrieving list 
+of deployment files...
+Building: Previous build 
+caches not available.
+Building: Downloading 6 
+deployment files...
+Building: Running "vercel 
+build"
+Building: Vercel CLI 
+50.38.1
+Building: Build Completed 
+in /vercel/output [28ms]
+Building: Deploying 
+outputs...
+[2K[1A[2K[GPreview: ht
+tps://dist-fa3y9cdfu-samiy
+amohd19s-projects.vercel.a
+pp [8s]
+Completing...
+To deploy to production (d
+ist-five-eta-40.vercel.app
+), run `vercel --prod`
+
+Common next commands:
+- `vercel inspect dist-fa3
+y9cdfu-samiyamohd19s-proje
+cts.vercel.app --logs`
+- `vercel redeploy dist-fa
+3y9cdfu-samiyamohd19s-proj
+ects.vercel.app`
+- `vercel deploy --prod`
+https://dist-fa3y9cdfu-samiyamohd19s-projects.vercel.app
