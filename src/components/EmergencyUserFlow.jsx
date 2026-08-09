@@ -144,14 +144,34 @@ function EmergencyUserFlow() {
         try {
             var newToken = generateEmergencyToken();
             var _supabaseClient = require("../services/supabaseClient");
+            const deptObj = state.departments.find(d => d.name === formData.primaryDepartment);
+            const deptId = deptObj ? deptObj.id : 'gen_med';
+
             _supabaseClient.supabase.from('queue').insert({
                 token_id: newToken.id,
                 patient_name: newToken.patient.name,
-                doctor_id: formData.assignedDoctor || 'any',
-                status: newToken.status || 'waiting',
+                doctor_id: (formData.assignedDoctor && formData.assignedDoctor !== 'any') ? formData.assignedDoctor : null,
+                status: 'waiting',
+                department: formData.primaryDepartment,
+                patient_phone: formData.isAssisted ? (formData.phone || '') : (state.patientInfo.phone || ''),
+                patient_age: parseInt(formData.age || '0'),
+                patient_gender: formData.gender || 'not specified',
+                booking_type: formData.isAssisted ? 'assisted' : 'self',
                 token_data: newToken
             }).then(function(res) {
-                if (res.error) console.error("Supabase insert error:", res.error);
+                if (res.error) {
+                    console.error("Supabase insert error:", res.error);
+                } else {
+                    _supabaseClient.supabase.from('queue_visits').insert({
+                        token_id: newToken.id,
+                        department_id: deptId,
+                        doctor_id: (formData.assignedDoctor && formData.assignedDoctor !== 'any') ? formData.assignedDoctor : null,
+                        status: 'waiting',
+                        sequence_order: 1
+                    }).then(function(vRes) {
+                        if (vRes.error) console.error("Supabase insert queue_visits error:", vRes.error);
+                    });
+                }
             });
             sendEmergencyNotification(formData.primaryDepartment);
 

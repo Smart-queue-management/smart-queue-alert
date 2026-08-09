@@ -8,6 +8,7 @@ import {
   TextInput,
   Image,
   Dimensions,
+  Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAppContext } from "../context/AppContext";
@@ -29,10 +30,12 @@ import {
   Upload,
   QrCode,
   Save,
-  Plus
+  Plus,
+  Volume2
 } from "lucide-react-native";
 import { Card } from "../components/ui/card";
 import { toast } from "sonner-native";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "../components/ui/select";
 
 // Template data
 const TEMPLATES = [
@@ -59,8 +62,16 @@ export function StaffDashboard() {
   // Sort queue by priority
   const priorityMap = { emergency: 1, disabled: 2, common: 3 };
   
+  const currentStaffDept = appState.staffInfo?.department || 'General Medicine';
+  const matchedDept = (appState.departments || []).find(d => d.name === currentStaffDept);
+  const staffDeptId = matchedDept ? matchedDept.id : 'gen_med';
+
   // All active tokens
-  const allActiveTokens = (appState.tokens || []).filter(t => t.status === "active").sort((a, b) => {
+  const allActiveTokens = (appState.tokens || []).filter(t => {
+    // Find active visit for this department
+    const v = (t.visits || []).find(visit => visit.department_id === staffDeptId && (visit.status === 'waiting' || visit.status === 'called'));
+    return v !== undefined;
+  }).sort((a, b) => {
     const pA = priorityMap[a.type] || 3;
     const pB = priorityMap[b.type] || 3;
     if (pA !== pB) return pA - pB;
@@ -80,6 +91,7 @@ export function StaffDashboard() {
   const [diagnosis, setDiagnosis] = useState("");
   const [medicines, setMedicines] = useState([]);
   const [advice, setAdvice] = useState("");
+  const [referralDeptId, setReferralDeptId] = useState("");
 
   // QR Scanner State
   const [scannerOpen, setScannerOpen] = useState(false);
@@ -146,27 +158,180 @@ export function StaffDashboard() {
     setAdvice("");
   };
 
+  const handleCallPatient = async () => {
+    if (!activePatient) return;
+    
+    const roomCounter = appState.staffInfo?.room_counter || 'Room 101';
+
+    try {
+      // 1. Find active visit in queue_visits for this doctor's clinic
+      const activeVisit = (activePatient.visits || []).find(v => v.department_id === staffDeptId && (v.status === 'waiting' || v.status === 'called'));
+      
+      if (activeVisit) {
+        // Update visit status and room counter
+        await supabase
+          .from('queue_visits')
+          .update({ 
+            status: 'called', 
+            called_at: new Date().toISOString(),
+            room_counter: roomCounter 
+          })
+          .eq('id', activeVisit.id);
+      }
+
+      // Update main queue token status and room counter
+      const updatedTokenProps = { ...activePatient, status: "called", room_counter: roomCounter };
+      await supabase
+        .from('queue')
+        .update({ 
+            status: 'called', 
+            room_counter: roomCounter,
+            token_data: updatedTokenProps 
+        })
+        .eq('token_id', activePatient.id);
+
+      // 2. Local State update
+      const updatedTokens = appState.tokens.map((token) =>
+        token.id === activePatient.id ? updatedTokenProps : token
+      );
+      setAppState((prev) => ({ ...prev, tokens: updatedTokens }));
+
+      toast.success("Called Patient", {
+        description: `${activePatient.patient?.name || "Patient"} requested at ${roomCounter}.`,
+      });
+
+      // 3. TTS Announcement
+      const language = appState.language || 'en';
+      const tokenIdClean = activePatient.id.split('-').pop() || activePatient.id;
+      
+      let text = `Token number ${tokenIdClean}, please proceed to ${roomCounter}`;
+      if (language === 'hi') {
+          text = `टोकेन नंबर ${tokenIdClean}, कृपया ${roomCounter} पर जाएं`;
+      } else if (language === 'te') {
+          text = `టోకెన్ నంబర్ ${tokenIdClean}, దయచేసి ${roomCounter} కి వెళ్ళండి`;
+      }
+      
+      if (Platform.OS === 'web') {
+          if ('speechSynthesis' in window) {
+              window.speechSynthesis.cancel();
+              const utterance = new SpeechSynthesisUtterance(text);
+              utterance.lang = language === 'hi' ? 'hi-IN' : language === 'te' ? 'te-IN' : 'en-US';
+              window.speechSynthesis.speak(utterance);
+          }
+      } else {
+          try {
+              const Speech = require('expo-speech');
+              Speech.stop();
+              Speech.speak(text, { 
+                  language: language === 'hi' ? 'hi-IN' : language === 'te' ? 'te-IN' : 'en-US' 
+              });
+          } catch (speechErr) {
+              console.error("Native TTS call failed:", speechErr);
+          }
+      }
+    } catch (error) {
+      console.error("Call handling failed:", error);
+      toast.error("Error", { description: "Something went wrong. Please try again." });
+    }
+  };
+
   const handleMarkComplete = async () => {
     if (!activePatient) return;
 
-    // Mark token as completed
-    const updatedTokenProps = { ...activePatient, status: "completed" };
-    const updatedTokens = appState.tokens.map((token) =>
-      token.id === activePatient.id ? updatedTokenProps : token
-    );
+    try {
+      // 1. Find active visit in queue_visits for this doctor's clinic
+      const activeVisit = (activePatient.visits || []).find(v => v.department_id === staffDeptId && (v.status === 'waiting' || v.status === 'called'));
+      
+      if (activeVisit) {
+        // Mark current visit as completed
+        await supabase
+          .from('queue_visits')
+          .update({ 
+            status: 'completed', 
+            completed_at: new Date().toISOString() 
+          })
+          .eq('id', activeVisit.id);
+      }
 
-    await supabase.from('queue').update({ status: 'completed', token_data: updatedTokenProps }).eq('token_id', activePatient.id);
+      let updatedTokenProps = { ...activePatient };
 
-    setAppState((prev) => ({ ...prev, tokens: updatedTokens }));
-    toast.success("Consultation Completed", {
-      description: `${activePatient.patient?.name || "Patient"}'s session is closed.`,
-    });
+      if (referralDeptId) {
+        // 2. We are referring the patient!
+        const targetDept = (appState.departments || []).find(d => d.id === referralDeptId);
+        const targetDeptName = targetDept ? targetDept.name : 'Referred Department';
+        
+        // Find next sequence order
+        const maxSeq = (activePatient.visits || []).reduce((max, v) => Math.max(max, v.sequence_order || 0), 0);
+        const nextSeq = maxSeq + 1;
 
-    setPrescriptionMode(null);
-    
-    // Find next patient
-    const remainingTokens = allActiveTokens.filter(t => t.id !== activePatient.id);
-    setActivePatient(remainingTokens.length > 0 ? remainingTokens[0] : null);
+        // Check if duplicate visit exists
+        const hasActiveReferredVisit = (activePatient.visits || []).some(v => v.department_id === referralDeptId && (v.status === 'waiting' || v.status === 'called'));
+
+        if (!hasActiveReferredVisit) {
+          await supabase
+            .from('queue_visits')
+            .insert([{
+              token_id: activePatient.id,
+              department_id: referralDeptId,
+              doctor_id: null,
+              status: 'waiting',
+              sequence_order: nextSeq
+            }]);
+        }
+
+        updatedTokenProps.status = "waiting";
+        updatedTokenProps.room_counter = null;
+        updatedTokenProps.doctor_id = null;
+
+        await supabase
+          .from('queue')
+          .update({ 
+            status: 'waiting', 
+            room_counter: null,
+            doctor_id: null,
+            token_data: updatedTokenProps 
+          })
+          .eq('token_id', activePatient.id);
+
+        toast.success("Patient Referred", {
+          description: `Successfully referred to ${targetDeptName}.`,
+        });
+      } else {
+        // 3. Simple completion
+        updatedTokenProps.status = "completed";
+        
+        await supabase
+          .from('queue')
+          .update({ 
+            status: 'completed', 
+            token_data: updatedTokenProps 
+          })
+          .eq('token_id', activePatient.id);
+
+        toast.success("Consultation Completed", {
+          description: `${activePatient.patient?.name || "Patient"}'s session is closed.`,
+        });
+      }
+
+      const updatedTokens = appState.tokens.map((token) =>
+        token.id === activePatient.id ? updatedTokenProps : token
+      );
+      setAppState((prev) => ({ ...prev, tokens: updatedTokens }));
+
+      // Reset states
+      setPrescriptionMode(null);
+      setReferralDeptId("");
+      setDiagnosis("");
+      setMedicines([]);
+      setAdvice("");
+      
+      // Find next patient
+      const remainingTokens = allActiveTokens.filter(t => t.id !== activePatient.id);
+      setActivePatient(remainingTokens.length > 0 ? remainingTokens[0] : null);
+    } catch (error) {
+      console.error("Complete handling failed:", error);
+      toast.error("Error", { description: "Something went wrong. Please try again." });
+    }
   };
 
   const openScanner = async () => {
@@ -320,6 +485,22 @@ export function StaffDashboard() {
               </View>
             </Card>
 
+            {/* Referral Dropdown */}
+            <View style={{ marginBottom: 16 }}>
+              <Text style={{ fontSize: 14, fontWeight: '700', color: '#475569', marginBottom: 6 }}>Refer Patient to Clinic / Department:</Text>
+              <Select value={referralDeptId} onValueChange={setReferralDeptId}>
+                <SelectTrigger style={{ backgroundColor: '#fff', borderColor: '#cbd5e1', borderWidth: 1, borderRadius: 8, padding: 12 }}>
+                  <SelectValue placeholder="Select Clinic / Department (Optional)" />
+                </SelectTrigger>
+                <SelectContent style={{ backgroundColor: '#fff' }}>
+                  <SelectItem value="">None (Consultation Completed)</SelectItem>
+                  {(appState.departments || []).filter(d => d.id !== staffDeptId).map(d => (
+                    <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </View>
+
             {/* 3. MAIN ACTION AREA */}
             <View style={styles.mainActionArea}>
               <TouchableOpacity
@@ -329,10 +510,15 @@ export function StaffDashboard() {
                 <FileText size={20} color={prescriptionMode ? "#fff" : "#2563eb"} />
                 <Text style={[styles.primaryActionText, prescriptionMode && { color: "#fff" }]}>Prescription</Text>
               </TouchableOpacity>
+
+              <TouchableOpacity style={[styles.completeBtn, { backgroundColor: '#ea580c' }]} onPress={handleCallPatient}>
+                <Volume2 size={24} color="#fff" />
+                <Text style={styles.completeBtnText}>Call Patient</Text>
+              </TouchableOpacity>
               
               <TouchableOpacity style={styles.completeBtn} onPress={handleMarkComplete}>
                 <CheckCircle2 size={24} color="#fff" />
-                <Text style={styles.completeBtnText}>Mark Complete</Text>
+                <Text style={styles.completeBtnText}>Complete</Text>
               </TouchableOpacity>
             </View>
 

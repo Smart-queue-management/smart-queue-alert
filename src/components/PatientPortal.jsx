@@ -41,6 +41,14 @@ function PatientPortal() {
         setState(function (prev) { return Object.assign({}, prev, { currentView: 'staff-login' }); });
     };
 
+    var handleContinueAsKiosk = function handleContinueAsKiosk() {
+        setState(function (prev) { return Object.assign({}, prev, { currentView: 'kiosk-welcome' }); });
+    };
+
+    var handleContinueAsPublic = function handleContinueAsPublic() {
+        setState(function (prev) { return Object.assign({}, prev, { currentView: 'public-display' }); });
+    };
+
     var isLarge = state.accessibilityMode === 'high-contrast';
 
     return (/*#__PURE__*/
@@ -175,9 +183,35 @@ function PatientPortal() {
                                         }
                                         )
                                 }
-                                )]
+                                ),/*#__PURE__*/
+
+                                (0, _jsxRuntime.jsx)(_button.Button, {
+                                    onPress: handleContinueAsKiosk, style: [styles.continueBtn, { backgroundColor: '#f97316', shadowColor: '#f97316' }], children:/*#__PURE__*/
+                                        (0, _jsxRuntime.jsxs)(_reactNative.View, {
+                                            style: styles.btnContent, children: [/*#__PURE__*/
+                                                (0, _jsxRuntime.jsx)(_lucideReactNative.Monitor, { size: 20, color: "#ffffff", style: { marginRight: 12 } }),/*#__PURE__*/
+                                                (0, _jsxRuntime.jsx)(_reactNative.Text, { style: [styles.btnText, isLarge && { fontSize: 20 }], children: "Enter Kiosk Mode" }),/*#__PURE__*/
+                                                (0, _jsxRuntime.jsx)(_lucideReactNative.ArrowRight, { size: 20, color: "#ffffff", style: { marginLeft: 12 } })]
+                                        }
+                                        )
+                                }
+                                ),/*#__PURE__*/
+
+                                (0, _jsxRuntime.jsx)(_button.Button, {
+                                    onPress: handleContinueAsPublic, style: [styles.continueBtn, { backgroundColor: '#0ea5e9', shadowColor: '#0ea5e9' }], children:/*#__PURE__*/
+                                        (0, _jsxRuntime.jsxs)(_reactNative.View, {
+                                            style: styles.btnContent, children: [/*#__PURE__*/
+                                                (0, _jsxRuntime.jsx)(_lucideReactNative.Tv, { size: 20, color: "#ffffff", style: { marginRight: 12 } }),/*#__PURE__*/
+                                                (0, _jsxRuntime.jsx)(_reactNative.Text, { style: [styles.btnText, isLarge && { fontSize: 20 }], children: "Public TV Queue Display" }),/*#__PURE__*/
+                                                (0, _jsxRuntime.jsx)(_lucideReactNative.ArrowRight, { size: 20, color: "#ffffff", style: { marginLeft: 12 } })]
+                                        }
+                                        )
+                                }
+                                )
+                                ]
                         }
-                        )]
+                        )
+                        ]
                 }
                 ),/*#__PURE__*/
 

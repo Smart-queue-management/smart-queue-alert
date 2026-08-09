@@ -35,6 +35,8 @@ var _TokenDisplay = require("./components/TokenDisplay");
 var _ConsultationCompleted = require("./components/ConsultationCompleted");
 var _AgenticChatbot = require("./components/AgenticChatbot");
 var _StaffDashboard = require("./screens/StaffDashboard");
+var _KioskFlow = require("./components/KioskFlow");
+var _PublicDisplay = require("./components/PublicDisplay");
 
 var _supabaseClient = require("./services/supabaseClient");
 var _sonnerNative = require("sonner-native");
@@ -217,6 +219,34 @@ function AppContent() {
     var loadData = /*#__PURE__*/ (function () {
       var _ref = (0, _asyncToGenerator2.default)(function* () {
         try {
+            // Load departments and doctors
+            const { data: dbDepts } = yield _supabaseClient.supabase.from('departments').select('*');
+            const { data: dbDocs } = yield _supabaseClient.supabase.from('doctors').select('*');
+            const { data: dbVisits } = yield _supabaseClient.supabase.from('queue_visits').select('*').order('sequence_order', { ascending: true });
+            
+            if (dbDepts) {
+                const mappedDepts = dbDepts.map(d => {
+                    const deptDocs = dbDocs ? dbDocs.filter(doc => doc.department_id === d.id) : [];
+                    return {
+                        id: d.id,
+                        name: d.name,
+                        type: d.type || 'consultation',
+                        averageWaitTime: d.average_wait_time || 15,
+                        services: d.services || [],
+                        doctors: deptDocs.map(doc => ({
+                            id: doc.id,
+                            name: doc.name,
+                            specialization: doc.specialization || '',
+                            experience: doc.experience || 0,
+                            status: doc.status || 'available'
+                        }))
+                    };
+                });
+                setState(function(prev) {
+                    return Object.assign({}, prev, { departments: mappedDepts });
+                });
+            }
+
             var supabaseData = yield _supabaseClient.supabase.from('queue').select('*').order('created_at', { ascending: true });
             if (supabaseData.data && supabaseData.data.length > 0) {
                 var tokensToSet = [];
@@ -227,6 +257,30 @@ function AppContent() {
                             if (deserialized) {
                                 deserialized.id = row.token_id;
                                 deserialized.status = row.status || deserialized.status;
+                                deserialized.room_counter = row.room_counter || deserialized.room_counter;
+                                deserialized.booking_type = row.booking_type || deserialized.booking_type;
+                                
+                                // Map visits/journey from queue_visits relation
+                                const tokenVisits = dbVisits ? dbVisits.filter(v => v.token_id === row.token_id) : [];
+                                deserialized.visits = tokenVisits.map(v => {
+                                    const matchedDoc = dbDocs ? dbDocs.find(doc => doc.id === v.doctor_id) : null;
+                                    return {
+                                        id: v.id,
+                                        department_id: v.department_id,
+                                        department: v.department_id === 'gen_med' ? 'General Medicine' : 
+                                                    v.department_id === 'cardio' ? 'Cardiology' :
+                                                    v.department_id === 'ent' ? 'ENT' :
+                                                    v.department_id === 'ortho' ? 'Orthopedics' :
+                                                    v.department_id === 'lab' ? 'Laboratory' :
+                                                    v.department_id === 'pharm' ? 'Pharmacy' : v.department_id,
+                                        status: v.status,
+                                        room_counter: v.room_counter,
+                                        doctorName: matchedDoc ? matchedDoc.name : null,
+                                        notes: v.notes,
+                                        timestamp: v.created_at
+                                    };
+                                });
+                                
                                 tokensToSet.push(deserialized);
                             }
                         } catch(e) {}
@@ -275,6 +329,10 @@ function AppContent() {
                       if (newToken) {
                           newToken.id = payload.new.token_id;
                           newToken.status = payload.new.status || newToken.status;
+                          newToken.room_counter = payload.new.room_counter || newToken.room_counter;
+                          newToken.booking_type = payload.new.booking_type || newToken.booking_type;
+                          newToken.visits = newToken.visits || [];
+                          
                           setState(function(prev) {
                               if (prev.tokens.find(function(t) { return t.id === newToken.id; })) return prev;
                               return Object.assign({}, prev, { tokens: [].concat((0, _toConsumableArray2.default)(prev.tokens), [newToken]) });
@@ -291,6 +349,10 @@ function AppContent() {
                                       if (updatedToken) {
                                           updatedToken.id = payload.new.token_id;
                                           updatedToken.status = payload.new.status || updatedToken.status;
+                                          updatedToken.room_counter = payload.new.room_counter || updatedToken.room_counter;
+                                          updatedToken.booking_type = payload.new.booking_type || updatedToken.booking_type;
+                                          // preserve nested lists
+                                          updatedToken.visits = t.visits || [];
                                           return updatedToken;
                                       }
                                   }
@@ -310,8 +372,103 @@ function AppContent() {
               }
           }).subscribe();
 
+      var visitsChannel = _supabaseClient.supabase.channel('public:queue_visits')
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'queue_visits' }, function(payload) {
+              if (payload.eventType === 'INSERT') {
+                  const newVisit = payload.new;
+                  setState(function(prev) {
+                      return Object.assign({}, prev, {
+                          tokens: prev.tokens.map(function(t) {
+                              if (t.id === newVisit.token_id) {
+                                  t.visits = t.visits || [];
+                                  if (t.visits.find(v => v.id === newVisit.id)) return t;
+                                  
+                                  const formattedVisit = {
+                                      id: newVisit.id,
+                                      department_id: newVisit.department_id,
+                                      department: newVisit.department_id === 'gen_med' ? 'General Medicine' : 
+                                                  newVisit.department_id === 'cardio' ? 'Cardiology' :
+                                                  newVisit.department_id === 'ent' ? 'ENT' :
+                                                  newVisit.department_id === 'ortho' ? 'Orthopedics' :
+                                                  newVisit.department_id === 'lab' ? 'Laboratory' :
+                                                  newVisit.department_id === 'pharm' ? 'Pharmacy' : newVisit.department_id,
+                                      status: newVisit.status,
+                                      room_counter: newVisit.room_counter,
+                                      doctorName: null,
+                                      notes: newVisit.notes,
+                                      timestamp: newVisit.created_at
+                                  };
+                                  
+                                  // Update currentToken if active
+                                  let nextToken = t;
+                                  const updatedVisits = [].concat(t.visits, [formattedVisit]).sort((a,b) => new Date(a.timestamp) - new Date(b.timestamp));
+                                  nextToken = Object.assign({}, t, { visits: updatedVisits });
+                                  
+                                  if (prev.currentToken && prev.currentToken.id === t.id) {
+                                      // Force currentToken sync
+                                      setTimeout(() => {
+                                          setState(curr => Object.assign({}, curr, { currentToken: Object.assign({}, curr.currentToken, { visits: updatedVisits }) }));
+                                      }, 0);
+                                  }
+                                  
+                                  return nextToken;
+                              }
+                              return t;
+                          })
+                      });
+                  });
+              } else if (payload.eventType === 'UPDATE') {
+                  const updatedVisit = payload.new;
+                  setState(function(prev) {
+                      const newTokens = prev.tokens.map(function(t) {
+                          if (t.id === updatedVisit.token_id) {
+                              const updatedVisits = (t.visits || []).map(v => {
+                                  if (v.id === updatedVisit.id) {
+                                      return Object.assign({}, v, {
+                                          status: updatedVisit.status,
+                                          room_counter: updatedVisit.room_counter,
+                                          notes: updatedVisit.notes
+                                      });
+                                  }
+                                  return v;
+                              });
+                              
+                              if (prev.currentToken && prev.currentToken.id === t.id) {
+                                  setTimeout(() => {
+                                      setState(curr => Object.assign({}, curr, { currentToken: Object.assign({}, curr.currentToken, { visits: updatedVisits }) }));
+                                  }, 0);
+                              }
+                              
+                              return Object.assign({}, t, { visits: updatedVisits });
+                          }
+                          return t;
+                      });
+                      return Object.assign({}, prev, { tokens: newTokens });
+                  });
+              } else if (payload.eventType === 'DELETE') {
+                  const deletedVisit = payload.old;
+                  setState(function(prev) {
+                      return Object.assign({}, prev, {
+                          tokens: prev.tokens.map(function(t) {
+                              if (t.id === deletedVisit.token_id) {
+                                  const updatedVisits = (t.visits || []).filter(v => v.id !== deletedVisit.id);
+                                  if (prev.currentToken && prev.currentToken.id === t.id) {
+                                      setTimeout(() => {
+                                          setState(curr => Object.assign({}, curr, { currentToken: Object.assign({}, curr.currentToken, { visits: updatedVisits }) }));
+                                      }, 0);
+                                  }
+                                  return Object.assign({}, t, { visits: updatedVisits });
+                              }
+                              return t;
+                          })
+                      });
+                  });
+              }
+          }).subscribe();
+
       return function() {
           _supabaseClient.supabase.removeChannel(channel);
+          _supabaseClient.supabase.removeChannel(visitsChannel);
       };
   }, []);
 
@@ -697,6 +854,20 @@ function AppContent() {
       case "disabled":
         return /*#__PURE__*/ (0, _jsxRuntime.jsx)(
           _DisabledUserFlow.DisabledUserFlow,
+          {},
+        );
+      case "kiosk-welcome":
+      case "kiosk-service":
+      case "kiosk-department":
+      case "kiosk-confirm":
+      case "kiosk-token":
+        return /*#__PURE__*/ (0, _jsxRuntime.jsx)(
+          _KioskFlow.KioskFlow,
+          {},
+        );
+      case "public-display":
+        return /*#__PURE__*/ (0, _jsxRuntime.jsx)(
+          _PublicDisplay.PublicDisplay,
           {},
         );
       case "token":
