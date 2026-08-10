@@ -1078,7 +1078,7 @@ function AppContent() {
                   children: renderCurrentView(),
                 }),
 
-            state.patientInfo &&
+            state.currentView !== 'public-display' && !state.currentView?.startsWith('kiosk') &&
               /*#__PURE__*/ (0, _jsxRuntime.jsx)(
                 _AgenticChatbot.AgenticChatbot,
                 {},
