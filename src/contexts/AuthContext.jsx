@@ -59,18 +59,8 @@ updateUserMetadata:function(){var _updateUserMetadata=(0,_asyncToGenerator2.defa
 
 var useAuth=exports.useAuth=function useAuth(){return(0,_react.useContext)(AuthContext);};
 
-var supabase=(0,_supabaseJs.createClient)(
-`https://${_info.projectId}.supabase.co`,
-_info.publicAnonKey,
-{
-auth:{
-storage:_asyncStorage.default,
-autoRefreshToken:true,
-persistSession:true,
-detectSessionInUrl:false
-}
-}
-);
+var supabase = require("../services/supabaseClient").supabase;
+
 
 var AuthProvider=exports.AuthProvider=function AuthProvider(_ref){var children=_ref.children;
 var _useState=(0,_react.useState)(null),_useState2=(0,_slicedToArray2.default)(_useState,2),user=_useState2[0],setUser=_useState2[1];

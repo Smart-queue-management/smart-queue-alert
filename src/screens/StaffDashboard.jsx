@@ -305,7 +305,11 @@ export function StaffDashboard() {
             sequence_order: 1
         }]);
 
-        if (visitError) throw visitError;
+        if (visitError) {
+            // Cleanup queue insert to maintain consistency
+            await supabase.from('queue').delete().eq('token_id', tokenId).catch(console.error);
+            throw visitError;
+        }
 
         // Update app context optimistically
         setAppState(prev => ({
@@ -316,7 +320,13 @@ export function StaffDashboard() {
         setGeneratedKioskToken(newToken);
         toast.success("Token Generated Successfully!");
     } catch (error) {
-        console.error('Assisted Token Generation Error:', error);
+        console.error('Assisted Token Generation Failed:', {
+            message: error.message,
+            code: error.code,
+            details: error.details,
+            hint: error.hint,
+            raw: error
+        });
         toast.error("Unable to generate the token. Please try again.");
     } finally {
         setReceptionLoading(false);

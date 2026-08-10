@@ -192,7 +192,11 @@ export function KioskFlow() {
                 sequence_order: 1
             }]);
 
-            if (visitError) throw visitError;
+            if (visitError) {
+                // Cleanup queue insert to maintain consistency
+                await supabase.from('queue').delete().eq('token_id', tokenId).catch(console.error);
+                throw visitError;
+            }
 
             // Update app context optimistically
             setState(prev => ({
@@ -203,7 +207,13 @@ export function KioskFlow() {
             setGeneratedToken(newToken);
             setKioskStep('token');
         } catch (error) {
-            console.error('Kiosk Token Generation Error:', error);
+            console.error('Kiosk Token Generation Failed:', {
+                message: error.message,
+                code: error.code,
+                details: error.details,
+                hint: error.hint,
+                raw: error
+            });
             setErrorMessage("Unable to generate your token. Please try again.");
         } finally {
             setLoading(false);
@@ -223,6 +233,14 @@ export function KioskFlow() {
 
     const renderWelcome = () => (
         <View style={styles.fullscreenCenter}>
+            <TouchableOpacity 
+                style={styles.exitKioskBtn} 
+                onPress={() => setState(prev => ({ ...prev, currentView: 'portal' }))}
+            >
+                <ArrowLeft size={16} color="#475569" style={{ marginRight: 6 }} />
+                <Text style={styles.exitKioskText}>Exit Kiosk / வெளியேறு</Text>
+            </TouchableOpacity>
+
             <View style={styles.kioskHeader}>
                 <Hospital size={64} color="#2563eb" />
                 <Text style={styles.kioskHospitalTitle}>GOVERNMENT GENERAL HOSPITAL</Text>
@@ -363,6 +381,19 @@ export function KioskFlow() {
     const renderToken = () => {
         if (!generatedToken) return null;
 
+        const deptObj = state.departments.find(d => d.name === generatedToken.primaryDepartment);
+        const deptId = deptObj ? deptObj.id : 'gen_med';
+        const activeDeptTokens = (state.tokens || []).filter(t => {
+            const v = (t.visits || []).find(v => v.department_id === deptId && (v.status === 'waiting' || v.status === 'called'));
+            return v !== undefined;
+        });
+        const currentServingToken = activeDeptTokens.find(t => {
+            const v = (t.visits || []).find(v => v.department_id === deptId);
+            return v && v.status === 'called';
+        });
+        const currentServingId = currentServingToken ? currentServingToken.id : 'None';
+        const patientsAhead = Math.max(0, generatedToken.positionInQueue - 1);
+
         return (
             <View style={styles.fullscreenCenter}>
                 <CheckCircle2 size={72} color="#16a34a" style={{ marginBottom: 16 }} />
@@ -386,14 +417,18 @@ export function KioskFlow() {
                         
                         <View style={styles.tokenWaitInfo}>
                             <View style={styles.waitBox}>
-                                <Text style={styles.waitNum}>{generatedToken.positionInQueue}</Text>
-                                <Text style={styles.waitLbl}>Queue Position</Text>
+                                <Text style={styles.waitNum}>{patientsAhead}</Text>
+                                <Text style={styles.waitLbl}>Patients Ahead / ముందున్న రోగులు</Text>
                             </View>
                             <View style={styles.waitBox}>
                                 <Text style={styles.waitNum}>{generatedToken.estimatedWaitTime} min</Text>
-                                <Text style={styles.waitLbl}>Est. Wait Time</Text>
+                                <Text style={styles.waitLbl}>Est. Wait / అంచనా సమయం</Text>
                             </View>
                         </View>
+
+                        <Text style={{ fontSize: 16, color: '#4b5563', marginTop: 16, borderTopWidth: 1, borderTopColor: '#e2e8f0', paddingTop: 12, width: '100%', textAlign: 'center', fontWeight: 'bold' }}>
+                            Currently Serving / ప్రస్తుతం సేవలు: {currentServingId}
+                        </Text>
                     </CardContent>
                 </Card>
 
@@ -429,6 +464,30 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         padding: 32,
         backgroundColor: '#f8fafc'
+    },
+    exitKioskBtn: {
+        position: 'absolute',
+        top: 24,
+        right: 24,
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingVertical: 10,
+        paddingHorizontal: 16,
+        borderRadius: 8,
+        backgroundColor: '#f1f5f9',
+        borderWidth: 1,
+        borderColor: '#cbd5e1',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 4,
+        elevation: 2,
+        zIndex: 10
+    },
+    exitKioskText: {
+        color: '#475569',
+        fontSize: 15,
+        fontWeight: 'bold'
     },
     kioskContainer: {
         flex: 1,

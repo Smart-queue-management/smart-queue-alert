@@ -314,6 +314,31 @@ function AppContent() {
             });
           });
         }
+
+        var savedLanguage = yield _asyncStorage.default.getItem("hospital-language");
+        var savedPatientInfo = yield _asyncStorage.default.getItem("current-patient-info");
+        if (savedPatientInfo) {
+            try {
+                var parsedPatient = JSON.parse(savedPatientInfo);
+                setState(function(prev) {
+                    // Check if currentToken exists in loaded tokens to restore view
+                    const activeToken = prev.tokens.find(t => {
+                        const tPhone = t.patient_phone || (t.patient && t.patient.phone);
+                        return tPhone === parsedPatient.phone && t.status !== 'completed' && t.status !== 'cancelled';
+                    });
+                    return Object.assign({}, prev, { 
+                        language: savedLanguage || prev.language,
+                        patientInfo: parsedPatient,
+                        currentToken: activeToken || prev.currentToken,
+                        currentView: activeToken ? 'token' : (prev.currentView === 'portal' ? 'patient-dashboard' : prev.currentView)
+                    });
+                });
+            } catch(e) {}
+        } else if (savedLanguage) {
+            setState(function(prev) {
+                return Object.assign({}, prev, { language: savedLanguage });
+            });
+        }
       });
       return function loadData() {
         return _ref.apply(this, arguments);
@@ -589,6 +614,16 @@ function AppContent() {
       saveInfo();
     },
     [state.patientInfo],
+  );
+
+  // Save language preference
+  (0, _react.useEffect)(
+    function () {
+      if (state.language) {
+        _asyncStorage.default.setItem("hospital-language", state.language).catch(console.error);
+      }
+    },
+    [state.language],
   );
 
   // Apply theme changes

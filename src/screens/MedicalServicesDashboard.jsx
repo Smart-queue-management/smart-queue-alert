@@ -61,7 +61,23 @@ function PatientDashboard() {
     if (showDepartmentStats) return/*#__PURE__*/(0, _jsxRuntime.jsx)(_DepartmentStatistics.DepartmentStatistics, { onBack: function onBack() { return setShowDepartmentStats(false); } });
     if (showPatientHistory) return/*#__PURE__*/(0, _jsxRuntime.jsx)(_PatientHistory.PatientHistory, { onBack: function onBack() { return setShowPatientHistory(false); } });
 
-    var patientTokens = state.tokens.filter(function (tok) { var _state$patientInfo; return tok.patient.email === ((_state$patientInfo = state.patientInfo) == null ? void 0 : _state$patientInfo.email); });
+    var patientTokens = state.tokens.filter(function (tok) {
+        var _state$patientInfo;
+        const patientPhone = (_state$patientInfo = state.patientInfo) == null ? void 0 : _state$patientInfo.phone;
+        const patientEmail = (_state$patientInfo = state.patientInfo) == null ? void 0 : _state$patientInfo.email;
+        const tokPhone = tok.patient_phone || (tok.patient && tok.patient.phone);
+        const tokEmail = tok.patient && tok.patient.email;
+        if (patientPhone && tokPhone) {
+            return tokPhone === patientPhone;
+        }
+        if (patientEmail && tokEmail) {
+            return tokEmail === patientEmail;
+        }
+        return false;
+    });
+    const activePatientToken = patientTokens.find(function(tok) {
+        return tok.status !== 'completed' && tok.status !== 'cancelled';
+    });
     var totalVisits = patientTokens.flatMap(function (token) { return token.visits || []; }).length;
     var totalRecords = patientTokens.flatMap(function (token) { return token.prescriptions || []; }).length + patientTokens.flatMap(function (token) { return token.labTests || []; }).length;
 
@@ -127,8 +143,34 @@ function PatientDashboard() {
                                         (0, _jsxRuntime.jsx)(_badge.Badge, { variant: "secondary", children:/*#__PURE__*/(0, _jsxRuntime.jsx)(_reactNative.Text, { children: t.pdLoggedInAs }) })]
                                 }
                                 ),/*#__PURE__*/
-                                (0, _jsxRuntime.jsx)(_reactNative.View, { style: { alignItems: 'center', marginTop: 16 } }
-                                )]
+                                 activePatientToken ? (0, _jsxRuntime.jsxs)(_card.Card, {
+                                    style: { 
+                                        backgroundColor: '#f0f9ff', 
+                                        borderColor: '#bae6fd', 
+                                        borderWidth: 2, 
+                                        borderRadius: 12, 
+                                        padding: 16, 
+                                        marginTop: 16, 
+                                        width: '100%' 
+                                    },
+                                    children: [
+                                        (0, _jsxRuntime.jsxs)(_reactNative.Text, { style: { fontSize: 18, fontWeight: 'bold', color: '#0369a1' }, children: ["Active Token / క్రియాశీల టోకెన్: ", activePatientToken.id] }),
+                                        (0, _jsxRuntime.jsxs)(_reactNative.Text, { style: { fontSize: 14, color: '#0284c7', marginTop: 4 }, children: ["Department: ", activePatientToken.primaryDepartment] }),
+                                        (0, _jsxRuntime.jsx)(_button.Button, {
+                                            style: { marginTop: 12, backgroundColor: '#0284c7' },
+                                            onPress: function() {
+                                                setState(function(prev) {
+                                                    return Object.assign({}, prev, {
+                                                        currentToken: activePatientToken,
+                                                        currentView: 'token'
+                                                    });
+                                                });
+                                            },
+                                            children: (0, _jsxRuntime.jsx)(_reactNative.Text, { style: { color: '#fff', fontWeight: 'bold' }, children: "View Live Status / లైవ్ స్థితిని చూడండి" })
+                                        })
+                                    ]
+                                 }) : (0, _jsxRuntime.jsx)(_reactNative.View, { style: { alignItems: 'center', marginTop: 16 } })
+                                 ]
                         }
                         )
                 }

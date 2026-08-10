@@ -7,9 +7,11 @@ import { Phone, ArrowLeft, User } from 'lucide-react-native';
 import { toast } from 'sonner-native';
 import { useAppContext } from '../context/AppContext';
 import { supabase } from '../services/supabaseClient';
+import { useTranslation } from '../hooks/useTranslation';
 
 export function PatientRegistrationScreen() {
     const { setState } = useAppContext();
+    const t = useTranslation().t;
     const [phone, setPhone] = useState('');
     const [loading, setLoading] = useState(false);
     const [phoneError, setPhoneError] = useState('');
@@ -18,8 +20,8 @@ export function PatientRegistrationScreen() {
         setState(prev => ({ ...prev, currentView: 'portal' }));
     };
 
-    // Explicitly using Localhost backend URL as specified
-    const BACKEND_URL = 'http://127.0.0.1:5000';
+    // Use env variable for backend URL (supporting ngrok tunnels) with fallback to localhost
+    const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL || 'http://127.0.0.1:5000';
 
     const validatePhone = (p) => {
         const phoneRegex = /^[+]?[\d\s\-\(\)]{10,}$/;
@@ -91,8 +93,8 @@ export function PatientRegistrationScreen() {
                             <ArrowLeft size={20} color="#374151" />
                         </TouchableOpacity>
                         <View style={{ flex: 1 }}>
-                            <Text style={styles.title}>Patient Registration</Text>
-                            <Text style={styles.subtitle}>Enter your details to proceed</Text>
+                            <Text style={styles.title}>{t.title}</Text>
+                            <Text style={styles.subtitle}>{t.enterDetailsProceed}</Text>
                         </View>
                     </View>
 
@@ -100,18 +102,18 @@ export function PatientRegistrationScreen() {
                         <CardHeader>
                             <View style={styles.rowCentered}>
                                 <User size={20} color="#111827" style={{ marginRight: 8 }} />
-                                <CardTitle>Personal Info</CardTitle>
+                                <CardTitle>{t.personalInfoTitle}</CardTitle>
                             </View>
                         </CardHeader>
                         <CardContent>
                             <View style={styles.inputGroup}>
                                 <View style={styles.labelRow}>
                                     <Phone size={16} color="#374151" style={{ marginRight: 4 }} />
-                                    <Text style={styles.label}>Mobile Number *</Text>
+                                    <Text style={styles.label}>{t.mobileNumberLabel}</Text>
                                 </View>
                                 <TextInput
                                     style={[styles.input, phoneError && styles.inputError]}
-                                    placeholder="Enter 10 digit mobile number"
+                                    placeholder={t.enterMobilePlaceholder}
                                     value={phone}
                                     onChangeText={(val) => {
                                         setPhone(val);
@@ -129,7 +131,7 @@ export function PatientRegistrationScreen() {
                                 disabled={loading || !phone.trim()} 
                                 style={{ marginTop: 16 }}>
                                 <Text style={{ color: '#fff', fontSize: 18, fontWeight: 'bold' }}>
-                                    {loading ? 'Sending OTP...' : 'Continue'}
+                                    {loading ? t.sendingOtp : t.continue}
                                 </Text>
                             </Button>
 

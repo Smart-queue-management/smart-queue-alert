@@ -1,276 +1,458 @@
-var _interopRequireDefault = require("@babel/runtime/helpers/interopRequireDefault"); Object.defineProperty(exports, "__esModule", { value: true }); exports.PatientPortal = PatientPortal; var _slicedToArray2 = _interopRequireDefault(require("@babel/runtime/helpers/slicedToArray")); var _react = _interopRequireDefault(require("react"));
-var _reactNative = require("react-native");
-var _useTranslation = require("../hooks/useTranslation");
-var _button = require("./ui/button");
-var _card = require("./ui/card");
-var _select = require("./ui/select");
-var _toggle = require("./ui/toggle");
-var _lucideReactNative = require("lucide-react-native"); var _jsxRuntime = require("react/jsx-runtime");
+import React from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  Dimensions,
+  Platform
+} from 'react-native';
+import { useAppContext } from '../context/AppContext';
+import { useTranslation } from '../hooks/useTranslation';
+import {
+  Languages,
+  ArrowRight,
+  UserCheck,
+  Monitor,
+  Stethoscope,
+  Tv,
+  BarChart2,
+  CheckCircle2,
+  ShieldCheck,
+  Hospital
+} from 'lucide-react-native';
 
+const { width } = Dimensions.get('window');
 
+const languages = [
+  { code: 'en', label: 'English' },
+  { code: 'te', label: 'తెలుగు' },
+  { code: 'hi', label: 'हिन्दी' }
+];
 
+export function PatientPortal() {
+  const { state, setState } = useAppContext();
+  const { t } = useTranslation();
 
-var languages = {
-    en: 'English',
-    hi: 'हिंदी',
-    mr: 'मराठी',
-    ta: 'தமிழ்',
-    te: 'తెలుగు',
-    bn: 'বাংলা'
-};
+  const handleLanguageChange = (code) => {
+    setState(prev => ({ ...prev, language: code }));
+  };
 
-var _Dimensions$get = _reactNative.Dimensions.get('window'), width = _Dimensions$get.width;
+  const handleContinueAsPatient = () => {
+    setState(prev => ({ ...prev, currentView: 'patient-registration' }));
+  };
 
-function PatientPortal() {
-    var _useAppContext = require("../context/AppContext").useAppContext(), state = _useAppContext.state, setState = _useAppContext.setState;
-    var t = (0, _useTranslation.useTranslation)().t;
+  const handleContinueAsStaff = () => {
+    setState(prev => ({ ...prev, currentView: 'staff-login' }));
+  };
 
-    var handleLanguageChange = function handleLanguageChange(language) {
-        setState(function (prev) { return Object.assign({}, prev, { language: language }); });
-    };
+  const handleContinueAsKiosk = () => {
+    setState(prev => ({ ...prev, currentView: 'kiosk-welcome' }));
+  };
 
-    var handleAccessibilityToggle = function handleAccessibilityToggle(pressed) {
-        setState(function (prev) { return Object.assign({}, prev, { accessibilityMode: pressed ? 'high-contrast' : 'normal' }); });
-    };
+  const handleContinueAsPublic = () => {
+    setState(prev => ({ ...prev, currentView: 'public-display' }));
+  };
 
-    var handleContinueAsPatient = function handleContinueAsPatient() {
-        setState(function (prev) { return Object.assign({}, prev, { currentView: 'patient-registration' }); });
-    };
+  const handleContinueAsOperations = () => {
+    setState(prev => ({ ...prev, currentView: 'operations-summary' }));
+  };
 
-    var handleContinueAsStaff = function handleContinueAsStaff() {
-        setState(function (prev) { return Object.assign({}, prev, { currentView: 'staff-login' }); });
-    };
+  const isDesktop = width >= 768;
 
-    var handleContinueAsKiosk = function handleContinueAsKiosk() {
-        setState(function (prev) { return Object.assign({}, prev, { currentView: 'kiosk-welcome' }); });
-    };
+  return (
+    <ScrollView contentContainerStyle={styles.scrollContainer} showsVerticalScrollIndicator={false}>
+      <View style={styles.container}>
+        
+        {/* 1. Header Bar */}
+        <View style={styles.header}>
+          <View style={styles.brandGroup}>
+            <View style={styles.brandIconWrap}>
+              <Hospital size={24} color="#0284c7" />
+            </View>
+            <View>
+              <Text style={styles.brandTitle}>GGH Hospital</Text>
+              <Text style={styles.brandSubtitle}>Smart Queue Management</Text>
+            </View>
+          </View>
 
-    var handleContinueAsPublic = function handleContinueAsPublic() {
-        setState(function (prev) { return Object.assign({}, prev, { currentView: 'public-display' }); });
-    };
+          {/* Quick Language Pills */}
+          <View style={styles.langPillGroup}>
+            <Languages size={18} color="#64748b" style={{ marginRight: 6 }} />
+            {languages.map(lang => (
+              <TouchableOpacity
+                key={lang.code}
+                style={[
+                  styles.langPill,
+                  state.language === lang.code && styles.langPillActive
+                ]}
+                onPress={() => handleLanguageChange(lang.code)}
+                activeOpacity={0.7}
+              >
+                <Text style={[
+                  styles.langPillText,
+                  state.language === lang.code && styles.langPillTextActive
+                ]}>
+                  {lang.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
 
-    var handleContinueAsOperations = function handleContinueAsOperations() {
-        setState(function (prev) { return Object.assign({}, prev, { currentView: 'operations-summary' }); });
-    };
+        {/* 2. Hero Section */}
+        <View style={styles.heroSection}>
+          <View style={styles.heroBadge}>
+            <CheckCircle2 size={16} color="#0284c7" style={{ marginRight: 6 }} />
+            <Text style={styles.heroBadgeText}>Next-Gen Smart Queue & Smarter Care</Text>
+          </View>
+          <Text style={styles.heroTitle}>{t.heroTitle || "Skip the Waiting Room"}</Text>
+          <Text style={styles.heroSubtitle}>
+            {t.heroSubtitle || "Join the hospital queue remotely, track your position live, and arrive when your turn is approaching."}
+          </Text>
+        </View>
 
-    var isLarge = state.accessibilityMode === 'high-contrast';
+        {/* 3. Primary Action Card — Continue as Patient */}
+        <TouchableOpacity
+          style={styles.primaryCard}
+          onPress={handleContinueAsPatient}
+          activeOpacity={0.9}
+        >
+          <View style={styles.primaryCardInner}>
+            <View style={styles.primaryIconWrap}>
+              <UserCheck size={32} color="#ffffff" />
+            </View>
 
-    return (/*#__PURE__*/
-        (0, _jsxRuntime.jsxs)(_reactNative.ScrollView, {
-            contentContainerStyle: styles.container, children: [/*#__PURE__*/
+            <View style={{ flex: 1 }}>
+              <Text style={styles.primaryCardBadge}>PATIENT PORTAL</Text>
+              <Text style={styles.primaryCardTitle}>
+                {t.continue || "Continue as Patient"}
+              </Text>
+              <Text style={styles.primaryCardSubtitle}>
+                {t.remoteQueueSubtitle || "Book your queue remotely and arrive on time"}
+              </Text>
+            </View>
 
-                (0, _jsxRuntime.jsxs)(_reactNative.View, {
-                    style: styles.topBar, children: [/*#__PURE__*/
-                        (0, _jsxRuntime.jsxs)(_reactNative.View, {
-                            style: styles.controlGroup, children: [/*#__PURE__*/
-                                (0, _jsxRuntime.jsx)(_reactNative.View, {
-                                    style: styles.iconCircle, children:/*#__PURE__*/
-                                        (0, _jsxRuntime.jsx)(_lucideReactNative.Languages, { size: 20, color: "#0ea5e9" })
-                                }
-                                ),/*#__PURE__*/
-                                (0, _jsxRuntime.jsxs)(_select.Select, {
-                                    value: state.language, onValueChange: handleLanguageChange, children: [/*#__PURE__*/
-                                        (0, _jsxRuntime.jsx)(_select.SelectTrigger, {
-                                            style: styles.selectTrigger, children:/*#__PURE__*/
-                                                (0, _jsxRuntime.jsx)(_select.SelectValue, { placeholder: "Language" })
-                                        }
-                                        ),/*#__PURE__*/
-                                        (0, _jsxRuntime.jsx)(_select.SelectContent, {
-                                            children:
-                                                Object.entries(languages).map(function (_ref) {
-                                                    var _ref2 = (0, _slicedToArray2.default)(_ref, 2), code = _ref2[0], name = _ref2[1]; return (/*#__PURE__*/
-                                                        (0, _jsxRuntime.jsx)(_select.SelectItem, {
-                                                            value: code, children:/*#__PURE__*/
-                                                                (0, _jsxRuntime.jsx)(_reactNative.Text, { children: name })
-                                                        }, code
-                                                        ));
-                                                }
-                                                )
-                                        }
-                                        )]
-                                }
-                                )]
-                        }
-                        ),/*#__PURE__*/
+            <View style={styles.primaryArrowWrap}>
+              <ArrowRight size={24} color="#ffffff" />
+            </View>
+          </View>
+        </TouchableOpacity>
 
-                        (0, _jsxRuntime.jsxs)(_reactNative.View, {
-                            style: styles.controlGroup, children: [/*#__PURE__*/
-                                (0, _jsxRuntime.jsx)(_reactNative.View, {
-                                    style: styles.iconCircle, children:/*#__PURE__*/
-                                        (0, _jsxRuntime.jsx)(_lucideReactNative.Type, { size: 20, color: "#0ea5e9" })
-                                }
-                                ),/*#__PURE__*/
-                                (0, _jsxRuntime.jsx)(_toggle.Toggle, {
-                                    pressed: state.accessibilityMode === 'high-contrast',
-                                    onPressedChange: handleAccessibilityToggle,
-                                    style: styles.toggle, children:/*#__PURE__*/
+        {/* 4. Secondary Services Header */}
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Hospital Portals & Services</Text>
+          <Text style={styles.sectionSub}>Select an operation mode to proceed</Text>
+        </View>
 
-                                        (0, _jsxRuntime.jsx)(_reactNative.Text, { style: { color: state.accessibilityMode === 'high-contrast' ? '#0f172a' : '#0f172a' }, children: isLarge ? t.large : t.normal })
-                                }
-                                )]
-                        }
-                        )]
-                }
-                ),/*#__PURE__*/
+        {/* 5. Secondary Services Grid */}
+        <View style={[styles.gridContainer, isDesktop ? styles.gridDesktop : styles.gridMobile]}>
+          
+          {/* Card 1: Kiosk Mode */}
+          <TouchableOpacity
+            style={styles.secondaryCard}
+            onPress={handleContinueAsKiosk}
+            activeOpacity={0.8}
+          >
+            <View style={[styles.secondaryIconBox, { backgroundColor: '#ffedd5' }]}>
+              <Monitor size={24} color="#ea580c" />
+            </View>
+            <View style={styles.secondaryTextWrap}>
+              <Text style={styles.secondaryCardTitle}>{t.kioskTitle || "Kiosk Mode"}</Text>
+              <Text style={styles.secondaryCardDesc}>{t.kioskDesc || "Generate a token at the hospital"}</Text>
+            </View>
+            <ArrowRight size={18} color="#94a3b8" />
+          </TouchableOpacity>
 
+          {/* Card 2: Staff Dashboard */}
+          <TouchableOpacity
+            style={styles.secondaryCard}
+            onPress={handleContinueAsStaff}
+            activeOpacity={0.8}
+          >
+            <View style={[styles.secondaryIconBox, { backgroundColor: '#dcfce7' }]}>
+              <Stethoscope size={24} color="#16a34a" />
+            </View>
+            <View style={styles.secondaryTextWrap}>
+              <Text style={styles.secondaryCardTitle}>{t.staffTitle || "Staff Dashboard"}</Text>
+              <Text style={styles.secondaryCardDesc}>{t.staffDesc || "Doctor & reception operations"}</Text>
+            </View>
+            <ArrowRight size={18} color="#94a3b8" />
+          </TouchableOpacity>
 
-                (0, _jsxRuntime.jsxs)(_reactNative.View, {
-                    style: styles.hero, children: [/*#__PURE__*/
-                        (0, _jsxRuntime.jsx)(_reactNative.View, {
-                            style: styles.logoContainer, children:/*#__PURE__*/
-                                (0, _jsxRuntime.jsx)(_reactNative.Image, {
-                                    source: require('../assets/icon.png')// Using expo icon as placeholder
-                                    , style: styles.logo,
-                                    resizeMode: "contain"
-                                }
-                                )
-                        }
-                        ),/*#__PURE__*/
-                        (0, _jsxRuntime.jsx)(_reactNative.Text, { style: [styles.welcomeText, isLarge && { fontSize: 32 }], children: t.welcome }),/*#__PURE__*/
-                        (0, _jsxRuntime.jsx)(_reactNative.Text, { style: [styles.taglineText, isLarge && { fontSize: 20 }], children: t.tagline }),/*#__PURE__*/
-                        (0, _jsxRuntime.jsx)(_reactNative.Text, { style: [styles.getStartedText, isLarge && { fontSize: 24 }], children: t.getStarted })]
-                }
-                ),/*#__PURE__*/
+          {/* Card 3: Public Display */}
+          <TouchableOpacity
+            style={styles.secondaryCard}
+            onPress={handleContinueAsPublic}
+            activeOpacity={0.8}
+          >
+            <View style={[styles.secondaryIconBox, { backgroundColor: '#e0f2fe' }]}>
+              <Tv size={24} color="#0284c7" />
+            </View>
+            <View style={styles.secondaryTextWrap}>
+              <Text style={styles.secondaryCardTitle}>{t.publicTvTitle || "Public Display"}</Text>
+              <Text style={styles.secondaryCardDesc}>{t.publicTvDesc || "Hospital queue display"}</Text>
+            </View>
+            <ArrowRight size={18} color="#94a3b8" />
+          </TouchableOpacity>
 
+          {/* Card 4: Operations Overview */}
+          <TouchableOpacity
+            style={styles.secondaryCard}
+            onPress={handleContinueAsOperations}
+            activeOpacity={0.8}
+          >
+            <View style={[styles.secondaryIconBox, { backgroundColor: '#f3e8ff' }]}>
+              <BarChart2 size={24} color="#9333ea" />
+            </View>
+            <View style={styles.secondaryTextWrap}>
+              <Text style={styles.secondaryCardTitle}>{t.opsTitle || "Operations Overview"}</Text>
+              <Text style={styles.secondaryCardDesc}>{t.opsDesc || "Hospital queue analytics"}</Text>
+            </View>
+            <ArrowRight size={18} color="#94a3b8" />
+          </TouchableOpacity>
 
-                (0, _jsxRuntime.jsxs)(_card.Card, {
-                    style: styles.card, children: [/*#__PURE__*/
-                        (0, _jsxRuntime.jsxs)(_card.CardHeader, {
-                            style: { alignItems: 'center', display: 'none' }, children: [/*#__PURE__*/
-                                (0, _jsxRuntime.jsx)(_reactNative.View, {
-                                    style: styles.hospitalIconBox, children:/*#__PURE__*/
-                                        (0, _jsxRuntime.jsx)(_lucideReactNative.Hospital, { size: 32, color: "#0ea5e9" })
-                                }
-                                ),/*#__PURE__*/
-                                (0, _jsxRuntime.jsx)(_card.CardTitle, { style: [styles.cardTitle, isLarge && { fontSize: 28 }], children: '' })]
-                        }
-                        ),/*#__PURE__*/
-                        (0, _jsxRuntime.jsxs)(_card.CardContent, {
-                            style: { gap: 16 }, children: [/*#__PURE__*/
+        </View>
 
-                                (0, _jsxRuntime.jsxs)(_reactNative.View, {
-                                    style: styles.noteBox, children: [/*#__PURE__*/
-                                        (0, _jsxRuntime.jsx)(_reactNative.View, {
-                                            style: styles.noteIconBox, children:/*#__PURE__*/
-                                                (0, _jsxRuntime.jsx)(_lucideReactNative.CheckCircle, { size: 16, color: "#ffffff" })
-                                        }
-                                        ),/*#__PURE__*/
-                                        (0, _jsxRuntime.jsx)(_reactNative.Text, { style: [styles.noteText, isLarge && { fontSize: 18 }], children: t.note }),/*#__PURE__*/
-                                        (0, _jsxRuntime.jsx)(_reactNative.View, {
-                                            style: { position: 'absolute', top: 10, right: 10, opacity: 0.1 }, children:/*#__PURE__*/
-                                                (0, _jsxRuntime.jsx)(_lucideReactNative.Zap, { size: 32, color: "#14b8a6" })
-                                        }
-                                        )]
-                                }
-                                ),/*#__PURE__*/
+        {/* 6. Footer */}
+        <View style={styles.footer}>
+          <ShieldCheck size={16} color="#64748b" style={{ marginRight: 6 }} />
+          <Text style={styles.footerText}>
+            Smart Queue System • Secure & Multilingual Healthcare Queue Management
+          </Text>
+        </View>
 
-
-                                (0, _jsxRuntime.jsx)(_button.Button, {
-                                    onPress: handleContinueAsPatient, style: [styles.continueBtn, { backgroundColor: '#1d4ed8' }], children:/*#__PURE__*/
-                                        (0, _jsxRuntime.jsxs)(_reactNative.View, {
-                                            style: styles.btnContent, children: [/*#__PURE__*/
-                                                (0, _jsxRuntime.jsx)(_lucideReactNative.QrCode, { size: 20, color: "#ffffff", style: { marginRight: 12 } }),/*#__PURE__*/
-                                                (0, _jsxRuntime.jsx)(_reactNative.Text, { style: [styles.btnText, isLarge && { fontSize: 20 }], children: t.lpContinue || "Continue as Patient" }),/*#__PURE__*/
-                                                (0, _jsxRuntime.jsx)(_lucideReactNative.ArrowRight, { size: 20, color: "#ffffff", style: { marginLeft: 12 } })]
-                                        }
-                                        )
-                                }
-                                ),/*#__PURE__*/
-
-                                (0, _jsxRuntime.jsx)(_button.Button, {
-                                    onPress: handleContinueAsStaff, style: [styles.continueBtn, { backgroundColor: '#059669', shadowColor: '#059669' }], children:/*#__PURE__*/
-                                        (0, _jsxRuntime.jsxs)(_reactNative.View, {
-                                            style: styles.btnContent, children: [/*#__PURE__*/
-                                                (0, _jsxRuntime.jsx)(_lucideReactNative.Stethoscope, { size: 20, color: "#ffffff", style: { marginRight: 12 } }),/*#__PURE__*/
-                                                (0, _jsxRuntime.jsx)(_reactNative.Text, { style: [styles.btnText, isLarge && { fontSize: 20 }], children: t.continueStaff || "Continue as Staff / Doctor" }),/*#__PURE__*/
-                                                (0, _jsxRuntime.jsx)(_lucideReactNative.ArrowRight, { size: 20, color: "#ffffff", style: { marginLeft: 12 } })]
-                                        }
-                                        )
-                                }
-                                ),/*#__PURE__*/
-
-                                (0, _jsxRuntime.jsx)(_button.Button, {
-                                    onPress: handleContinueAsKiosk, style: [styles.continueBtn, { backgroundColor: '#f97316', shadowColor: '#f97316' }], children:/*#__PURE__*/
-                                        (0, _jsxRuntime.jsxs)(_reactNative.View, {
-                                            style: styles.btnContent, children: [/*#__PURE__*/
-                                                (0, _jsxRuntime.jsx)(_lucideReactNative.Monitor, { size: 20, color: "#ffffff", style: { marginRight: 12 } }),/*#__PURE__*/
-                                                (0, _jsxRuntime.jsx)(_reactNative.Text, { style: [styles.btnText, isLarge && { fontSize: 20 }], children: "Enter Kiosk Mode" }),/*#__PURE__*/
-                                                (0, _jsxRuntime.jsx)(_lucideReactNative.ArrowRight, { size: 20, color: "#ffffff", style: { marginLeft: 12 } })]
-                                        }
-                                        )
-                                }
-                                ),/*#__PURE__*/
-
-                                (0, _jsxRuntime.jsx)(_button.Button, {
-                                    onPress: handleContinueAsPublic, style: [styles.continueBtn, { backgroundColor: '#0ea5e9', shadowColor: '#0ea5e9' }], children:/*#__PURE__*/
-                                        (0, _jsxRuntime.jsxs)(_reactNative.View, {
-                                            style: styles.btnContent, children: [/*#__PURE__*/
-                                                (0, _jsxRuntime.jsx)(_lucideReactNative.Tv, { size: 20, color: "#ffffff", style: { marginRight: 12 } }),/*#__PURE__*/
-                                                (0, _jsxRuntime.jsx)(_reactNative.Text, { style: [styles.btnText, isLarge && { fontSize: 20 }], children: "Public TV Queue Display" }),/*#__PURE__*/
-                                                (0, _jsxRuntime.jsx)(_lucideReactNative.ArrowRight, { size: 20, color: "#ffffff", style: { marginLeft: 12 } })]
-                                        }
-                                        )
-                                }),/*#__PURE__*/
-
-                                (0, _jsxRuntime.jsx)(_button.Button, {
-                                    onPress: handleContinueAsOperations, style: [styles.continueBtn, { backgroundColor: '#7c3aed', shadowColor: '#7c3aed' }], children:/*#__PURE__*/
-                                        (0, _jsxRuntime.jsxs)(_reactNative.View, {
-                                            style: styles.btnContent, children: [/*#__PURE__*/
-                                                (0, _jsxRuntime.jsx)(_lucideReactNative.BarChart2, { size: 20, color: "#ffffff", style: { marginRight: 12 } }),/*#__PURE__*/
-                                                (0, _jsxRuntime.jsx)(_reactNative.Text, { style: [styles.btnText, isLarge && { fontSize: 20 }], children: "Operations Dashboard" }),/*#__PURE__*/
-                                                (0, _jsxRuntime.jsx)(_lucideReactNative.ArrowRight, { size: 20, color: "#ffffff", style: { marginLeft: 12 } })]
-                                        }
-                                        )
-                                })
-                                ]
-                        }
-                        )
-                        ]
-                }
-                ),/*#__PURE__*/
-
-
-                (0, _jsxRuntime.jsxs)(_reactNative.View, {
-                    style: styles.footer, children: [/*#__PURE__*/
-                        (0, _jsxRuntime.jsxs)(_reactNative.View, {
-                            style: styles.footerContent, children: [/*#__PURE__*/
-                                (0, _jsxRuntime.jsx)(_lucideReactNative.Zap, { size: 20, color: "#0ea5e9", style: { marginRight: 8 } }),/*#__PURE__*/
-                                (0, _jsxRuntime.jsx)(_reactNative.Text, { style: [styles.footerTitle, isLarge && { fontSize: 16 }], children: "Smart Queue Management System" }),/*#__PURE__*/
-                                (0, _jsxRuntime.jsx)(_lucideReactNative.Shield, { size: 20, color: "#14b8a6", style: { marginLeft: 8 } })]
-                        }
-                        ),/*#__PURE__*/
-                        (0, _jsxRuntime.jsx)(_reactNative.Text, { style: styles.footerSub, children: "\uD83D\uDE80 Next-Generation Hospital Queue System" })]
-                }
-                )]
-        }
-        ));
-
+      </View>
+    </ScrollView>
+  );
 }
 
-var styles = _reactNative.StyleSheet.create({
-    container: { flexGrow: 1, backgroundColor: '#f0fdfa', padding: 24, alignItems: 'center' },// softer background (minty), more padding
-    topBar: { flexDirection: 'row', justifyContent: 'space-between', width: '100%', marginBottom: 40 },// more breathing room
-    controlGroup: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.9)', borderRadius: 12, padding: 6, shadowColor: '#0ea5e9', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 4, elevation: 1 },// softer shadows, rounder
-    iconCircle: { width: 40, height: 40, backgroundColor: '#ffffff', borderRadius: 20, alignItems: 'center', justifyContent: 'center', marginRight: 8, shadowColor: '#0ea5e9', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 4, elevation: 1 },
-    selectTrigger: { borderWidth: 0, backgroundColor: 'transparent', minWidth: 100 },
-    toggle: { paddingHorizontal: 16, paddingVertical: 10, borderRadius: 8 },
-    hero: { alignItems: 'center', marginBottom: 48, width: '100%' },// more breathing room
-    logoContainer: { backgroundColor: '#ffffff', padding: 24, borderRadius: 24, marginBottom: 32, shadowColor: '#0ea5e9', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.08, shadowRadius: 16, elevation: 4 },// rounder, softer shadow
-    logo: { width: 140, height: 140 },// slightly larger logo area
-    welcomeText: { fontSize: 32, fontWeight: '800', color: '#0f172a', textAlign: 'center', marginBottom: 12, letterSpacing: -0.5 },// larger, softer dark slate
-    taglineText: { fontSize: 18, color: '#14b8a6', textAlign: 'center', marginBottom: 16, fontWeight: '500' },// soft teal
-    getStartedText: { fontSize: 20, color: '#64748b', textAlign: 'center', fontWeight: '400' },// softer gray
-    card: { width: '100%', maxWidth: 540, backgroundColor: '#ffffff', shadowColor: '#0ea5e9', shadowOffset: { width: 0, height: 12 }, shadowOpacity: 0.1, shadowRadius: 24, elevation: 8, borderRadius: 24, borderWidth: 1, borderColor: '#e0f2fe' },// softer shadow, highly rounded
-    hospitalIconBox: { width: 64, height: 64, backgroundColor: '#e0f2fe', borderRadius: 32, alignItems: 'center', justifyContent: 'center', marginBottom: 20 },// larger, rounder, soft blue background
-    cardTitle: { fontSize: 28, color: '#0f172a', fontWeight: '700', letterSpacing: -0.5 },// softer dark slate
-    noteBox: { flexDirection: 'row', backgroundColor: '#f0fdfa', borderColor: '#ccfbf1', borderWidth: 1, borderRadius: 12, padding: 16, position: 'relative', overflow: 'hidden' },// minty background, rounder
-    noteIconBox: { width: 28, height: 28, backgroundColor: '#14b8a6', borderRadius: 14, alignItems: 'center', justifyContent: 'center', marginRight: 16, marginTop: 2 },// teal icon
-    noteText: { flex: 1, fontSize: 16, color: '#0f172a', lineHeight: 24 },// softer slate
-    continueBtn: { paddingVertical: 18, borderRadius: 8, shadowColor: '#1d4ed8', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8, elevation: 4 },// customized button to match mockup
-    btnContent: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
-    btnText: { color: '#ffffff', fontSize: 18, fontWeight: 'bold', letterSpacing: 0.5 },
-    footer: { marginTop: 'auto', paddingTop: 40, paddingBottom: 24, alignItems: 'center' },
-    footerContent: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#ffffff', paddingHorizontal: 20, paddingVertical: 14, borderRadius: 16, borderWidth: 1, borderColor: '#e0f2fe', marginBottom: 12, shadowColor: '#0ea5e9', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 4, elevation: 1 },// rounder, soft border/shadow
-    footerTitle: { fontSize: 15, fontWeight: '600', color: '#0369a1' },// deeper teal
-    footerSub: { fontSize: 12, color: '#64748b', textAlign: 'center' }// softer gray
+const styles = StyleSheet.create({
+  scrollContainer: {
+    flexGrow: 1,
+    backgroundColor: '#f8fafc',
+  },
+  container: {
+    width: '100%',
+    maxWidth: 960,
+    alignSelf: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 24,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 36,
+    flexWrap: 'wrap',
+    gap: 16,
+  },
+  brandGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  brandIconWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: '#e0f2fe',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  brandTitle: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#0f172a',
+  },
+  brandSubtitle: {
+    fontSize: 13,
+    color: '#64748b',
+    fontWeight: '500',
+  },
+  langPillGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#ffffff',
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  langPill: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+  },
+  langPillActive: {
+    backgroundColor: '#0284c7',
+  },
+  langPillText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#475569',
+  },
+  langPillTextActive: {
+    color: '#ffffff',
+  },
+  heroSection: {
+    alignItems: 'center',
+    textAlign: 'center',
+    marginBottom: 32,
+    paddingHorizontal: 12,
+  },
+  heroBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#e0f2fe',
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 20,
+    marginBottom: 16,
+  },
+  heroBadgeText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#0369a1',
+  },
+  heroTitle: {
+    fontSize: Platform.OS === 'web' ? 36 : 28,
+    fontWeight: '900',
+    color: '#0f172a',
+    textAlign: 'center',
+    marginBottom: 12,
+    letterSpacing: -0.5,
+  },
+  heroSubtitle: {
+    fontSize: 16,
+    color: '#64748b',
+    textAlign: 'center',
+    maxWidth: 600,
+    lineHeight: 24,
+  },
+  primaryCard: {
+    backgroundColor: '#0284c7',
+    borderRadius: 20,
+    padding: 24,
+    marginBottom: 36,
+    shadowColor: '#0284c7',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.25,
+    shadowRadius: 16,
+    elevation: 6,
+  },
+  primaryCardInner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+  },
+  primaryIconWrap: {
+    width: 60,
+    height: 60,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  primaryCardBadge: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#bae6fd',
+    letterSpacing: 1,
+    marginBottom: 4,
+  },
+  primaryCardTitle: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: '#ffffff',
+    marginBottom: 4,
+  },
+  primaryCardSubtitle: {
+    fontSize: 14,
+    color: '#e0f2fe',
+  },
+  primaryArrowWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sectionHeader: {
+    marginBottom: 16,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#0f172a',
+    marginBottom: 4,
+  },
+  sectionSub: {
+    fontSize: 13,
+    color: '#64748b',
+  },
+  gridContainer: {
+    gap: 16,
+    marginBottom: 40,
+  },
+  gridDesktop: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
+  gridMobile: {
+    flexDirection: 'column',
+  },
+  secondaryCard: {
+    flex: 1,
+    minWidth: 260,
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    padding: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  secondaryIconBox: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 14,
+  },
+  secondaryTextWrap: {
+    flex: 1,
+  },
+  secondaryCardTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#0f172a',
+    marginBottom: 2,
+  },
+  secondaryCardDesc: {
+    fontSize: 12,
+    color: '#64748b',
+  },
+  footer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#e2e8f0',
+  },
+  footerText: {
+    fontSize: 12,
+    color: '#64748b',
+    textAlign: 'center',
+  },
 });

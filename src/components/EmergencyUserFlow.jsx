@@ -157,7 +157,7 @@ function EmergencyUserFlow() {
             const deptObj = state.departments.find(d => d.name === formData.primaryDepartment);
             const deptId = deptObj ? deptObj.id : 'gen_med';
 
-            _supabaseClient.supabase.from('queue').insert({
+             _supabaseClient.supabase.from('queue').insert({
                 token_id: newToken.id,
                 patient_name: newToken.patient.name,
                 doctor_id: (formData.assignedDoctor && formData.assignedDoctor !== 'any') ? formData.assignedDoctor : null,
@@ -170,7 +170,12 @@ function EmergencyUserFlow() {
                 token_data: newToken
             }).then(function(res) {
                 if (res.error) {
-                    console.error("Supabase insert error:", res.error);
+                    console.error("Supabase queue insert failed:", {
+                        message: res.error.message,
+                        code: res.error.code,
+                        details: res.error.details,
+                        hint: res.error.hint
+                    });
                 } else {
                     _supabaseClient.supabase.from('queue_visits').insert({
                         token_id: newToken.id,
@@ -179,7 +184,16 @@ function EmergencyUserFlow() {
                         status: 'waiting',
                         sequence_order: 1
                     }).then(function(vRes) {
-                        if (vRes.error) console.error("Supabase insert queue_visits error:", vRes.error);
+                        if (vRes.error) {
+                            console.error("Supabase queue_visits insert failed:", {
+                                message: vRes.error.message,
+                                code: vRes.error.code,
+                                details: vRes.error.details,
+                                hint: vRes.error.hint
+                            });
+                            // Cleanup queue table to maintain consistency
+                            _supabaseClient.supabase.from('queue').delete().eq('token_id', newToken.id).catch(console.error);
+                        }
                     });
                 }
             });

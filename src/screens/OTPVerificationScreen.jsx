@@ -7,15 +7,18 @@ import { ShieldCheck, ArrowLeft } from 'lucide-react-native';
 import { toast } from 'sonner-native';
 import { useAppContext } from '../context/AppContext';
 import { OTPInput } from '../components/OTPInput';
+import { supabase } from '../services/supabaseClient';
+import { useTranslation } from '../hooks/useTranslation';
 
 export function OTPVerificationScreen() {
     const { state, setState } = useAppContext();
+    const t = useTranslation().t;
     const [otp, setOtp] = useState(['', '', '', '', '', '']);
     const [loading, setLoading] = useState(false);
     const [otpError, setOtpError] = useState(false);
 
     const phone = state.pendingRegistrationPhone || '';
-    const BACKEND_URL = 'http://127.0.0.1:5000';
+    const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL || 'http://127.0.0.1:5000';
 
     const handleBack = () => {
         setState(prev => ({ ...prev, currentView: 'portal' }));
@@ -147,11 +150,11 @@ export function OTPVerificationScreen() {
                         <CardHeader>
                             <View style={styles.rowCentered}>
                                 <ShieldCheck size={24} color="#2563eb" style={{ marginRight: 8 }} />
-                                <CardTitle>Verify OTP</CardTitle>
+                                <CardTitle>{t.verifyOtpTitle}</CardTitle>
                             </View>
                         </CardHeader>
                         <CardContent>
-                            <Text style={styles.otpSubtitle}>Enter the OTP sent to {phone}</Text>
+                            <Text style={styles.otpSubtitle}>{t.enterOtpSentTo}{phone}</Text>
 
                             <OTPInput 
                                 length={6} 
@@ -160,21 +163,21 @@ export function OTPVerificationScreen() {
                                 editable={!loading} 
                             />
 
-                            {otpError ? <Text style={[styles.errorText, { textAlign: 'center', marginTop: 8 }]}>Invalid OTP. Please try again.</Text> : null}
+                            {otpError ? <Text style={[styles.errorText, { textAlign: 'center', marginTop: 8 }]}>{t.invalidOtpAlert}</Text> : null}
 
                             <Button 
                                 onPress={handleVerifyOtp} 
                                 disabled={loading || otp.join('').length < 6} 
                                 style={{ marginTop: 24, paddingVertical: 14 }}>
                                 <Text style={{ color: '#fff', fontSize: 18, fontWeight: 'bold' }}>
-                                    {loading ? 'Verifying...' : 'Verify OTP'}
+                                    {loading ? t.verifying : t.verifyOtpBtn}
                                 </Text>
                             </Button>
 
                             <View style={styles.resendContainer}>
-                                <Text style={styles.resendText}>Didn't receive the code? </Text>
+                                <Text style={styles.resendText}>{t.didNotReceiveCode}</Text>
                                 <TouchableOpacity onPress={handleResendOtp} disabled={loading}>
-                                    <Text style={styles.resendBtn}>Resend OTP</Text>
+                                    <Text style={styles.resendBtn}>{t.resendOtpBtn}</Text>
                                 </TouchableOpacity>
                             </View>
                         </CardContent>
