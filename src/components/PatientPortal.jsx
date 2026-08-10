@@ -5,8 +5,7 @@ import {
   StyleSheet,
   ScrollView,
   Image,
-  Dimensions,
-  TouchableOpacity
+  Dimensions
 } from 'react-native';
 import { useAppContext } from '../context/AppContext';
 import { useTranslation } from '../hooks/useTranslation';
@@ -22,11 +21,7 @@ import {
   QrCode,
   ArrowRight,
   Stethoscope,
-  Monitor,
-  Tv,
-  BarChart2,
-  Shield,
-  ChevronDown
+  Shield
 } from 'lucide-react-native';
 
 const languages = {
@@ -43,7 +38,6 @@ const { width } = Dimensions.get('window');
 export function PatientPortal() {
   const { state, setState } = useAppContext();
   const { t } = useTranslation();
-  const [showOperationalModes, setShowOperationalModes] = React.useState(false);
 
   const handleLanguageChange = (language) => {
     setState(prev => ({ ...prev, language }));
@@ -59,18 +53,6 @@ export function PatientPortal() {
 
   const handleContinueAsStaff = () => {
     setState(prev => ({ ...prev, currentView: 'staff-login' }));
-  };
-
-  const handleContinueAsKiosk = () => {
-    setState(prev => ({ ...prev, currentView: 'kiosk-welcome' }));
-  };
-
-  const handleContinueAsPublic = () => {
-    setState(prev => ({ ...prev, currentView: 'public-display' }));
-  };
-
-  const handleContinueAsOperations = () => {
-    setState(prev => ({ ...prev, currentView: 'operations-summary' }));
   };
 
   const isLarge = state.accessibilityMode === 'high-contrast';
@@ -125,7 +107,7 @@ export function PatientPortal() {
         <Text style={[styles.getStartedText, isLarge && { fontSize: 24 }]}>{t.getStarted}</Text>
       </View>
 
-      {/* Main Card */}
+      {/* Main Card — ONLY 2 ENTRY POINTS: Patient and Staff */}
       <Card style={styles.card}>
         <CardContent style={{ gap: 16 }}>
           {/* Note Box */}
@@ -139,7 +121,7 @@ export function PatientPortal() {
             </View>
           </View>
 
-          {/* Sole Primary Action Button — Continue as Patient */}
+          {/* 1. Primary Entry Point — Continue as Patient */}
           <Button
             onPress={handleContinueAsPatient}
             style={[styles.continueBtn, { backgroundColor: '#1d4ed8' }]}
@@ -153,57 +135,19 @@ export function PatientPortal() {
             </View>
           </Button>
 
-          {/* Secondary Operational Access */}
-          <View style={styles.opSection}>
-            <TouchableOpacity
-              style={styles.opToggleBtn}
-              onPress={() => setShowOperationalModes(!showOperationalModes)}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.opToggleText}>Hospital Staff & Operational Access</Text>
-              <ChevronDown
-                size={16}
-                color="#64748b"
-                style={{ transform: [{ rotate: showOperationalModes ? '180deg' : '0deg' }] }}
-              />
-            </TouchableOpacity>
-
-            {showOperationalModes && (
-              <View style={styles.opGrid}>
-                <TouchableOpacity
-                  style={[styles.opBtn, { borderColor: '#f97316' }]}
-                  onPress={handleContinueAsKiosk}
-                >
-                  <Monitor size={18} color="#ea580c" style={{ marginRight: 8 }} />
-                  <Text style={[styles.opBtnText, { color: '#ea580c' }]}>Kiosk Mode</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={[styles.opBtn, { borderColor: '#059669' }]}
-                  onPress={handleContinueAsStaff}
-                >
-                  <Stethoscope size={18} color="#059669" style={{ marginRight: 8 }} />
-                  <Text style={[styles.opBtnText, { color: '#059669' }]}>Staff / Doctor</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={[styles.opBtn, { borderColor: '#0ea5e9' }]}
-                  onPress={handleContinueAsPublic}
-                >
-                  <Tv size={18} color="#0284c7" style={{ marginRight: 8 }} />
-                  <Text style={[styles.opBtnText, { color: '#0284c7' }]}>Public TV</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={[styles.opBtn, { borderColor: '#7c3aed' }]}
-                  onPress={handleContinueAsOperations}
-                >
-                  <BarChart2 size={18} color="#7c3aed" style={{ marginRight: 8 }} />
-                  <Text style={[styles.opBtnText, { color: '#7c3aed' }]}>Operations</Text>
-                </TouchableOpacity>
-              </View>
-            )}
-          </View>
+          {/* 2. Secondary Entry Point — Staff Dashboard */}
+          <Button
+            onPress={handleContinueAsStaff}
+            style={[styles.continueBtn, { backgroundColor: '#059669', shadowColor: '#059669' }]}
+          >
+            <View style={styles.btnContent}>
+              <Stethoscope size={20} color="#ffffff" style={{ marginRight: 12 }} />
+              <Text style={[styles.btnText, isLarge && { fontSize: 20 }]}>
+                {t.continueStaff || "Staff Dashboard"}
+              </Text>
+              <ArrowRight size={20} color="#ffffff" style={{ marginLeft: 12 }} />
+            </View>
+          </Button>
         </CardContent>
       </Card>
 
@@ -242,12 +186,6 @@ const styles = StyleSheet.create({
   continueBtn: { paddingVertical: 18, borderRadius: 8, shadowColor: '#1d4ed8', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8, elevation: 4 },
   btnContent: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
   btnText: { color: '#ffffff', fontSize: 18, fontWeight: 'bold', letterSpacing: 0.5 },
-  opSection: { marginTop: 12, borderTopWidth: 1, borderTopColor: '#f1f5f9', paddingTop: 16 },
-  opToggleBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 8 },
-  opToggleText: { fontSize: 13, color: '#64748b', fontWeight: '600', marginRight: 6 },
-  opGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 12, justifyContent: 'center' },
-  opBtn: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, borderWidth: 1, backgroundColor: '#ffffff' },
-  opBtnText: { fontSize: 13, fontWeight: '600' },
   footer: { marginTop: 'auto', paddingTop: 40, paddingBottom: 24, alignItems: 'center' },
   footerContent: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#ffffff', paddingHorizontal: 20, paddingVertical: 14, borderRadius: 16, borderWidth: 1, borderColor: '#e0f2fe', marginBottom: 12, shadowColor: '#0ea5e9', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 4, elevation: 1 },
   footerTitle: { fontSize: 15, fontWeight: '600', color: '#0369a1' },

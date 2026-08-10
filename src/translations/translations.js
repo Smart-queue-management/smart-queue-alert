@@ -151,7 +151,8 @@ export const translations = {
         publicTvTitle: "Public Display",
         publicTvDesc: "Hospital queue display",
         opsTitle: "Operations Overview",
-        opsDesc: "Hospital queue analytics"
+        opsDesc: "Hospital queue analytics",
+        continueStaff: "Staff Dashboard"
     },
 
     hi: {
@@ -262,7 +263,8 @@ export const translations = {
         publicTvTitle: "सार्वजनिक प्रदर्शन",
         publicTvDesc: "अस्पताल कतार प्रदर्शन",
         opsTitle: "संचालन अवलोकन",
-        opsDesc: "अस्पताल कतार विश्लेषण"
+        opsDesc: "अस्पताल कतार विश्लेषण",
+        continueStaff: "स्टाफ डैशबोर्ड"
     },
 
     mr: {
@@ -388,7 +390,8 @@ export const translations = {
         publicTvTitle: "పబ్లిక్ డిస్‌ప్లే",
         publicTvDesc: "ఆసుపత్రి క్యూ డిస్‌ప్లే",
         opsTitle: "ఆపరేషన్స్ అవలోకనం",
-        opsDesc: "ఆసుపత్రి క్యూ విశ్లేషణలు"
+        opsDesc: "ఆసుపత్రి క్యూ విశ్లేషణలు",
+        continueStaff: "స్టాఫ్ డ్యాష్‌బోర్డ్"
     },
 
     bn: {
