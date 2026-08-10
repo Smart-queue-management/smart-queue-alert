@@ -124,3 +124,15 @@ INSERT INTO doctors (id, name, specialization, experience, status, department_id
 ('ent1', 'Dr. K. Srinivas', 'ENT Specialist', 10, 'available', 'ent'),
 ('ortho1', 'Dr. P. Venkat', 'Orthopedic Surgeon', 14, 'available', 'ortho')
 ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name;
+
+-- Seed mock data for staff accounts (passwords are plaintext for MVP bypass check)
+INSERT INTO staff_accounts (staff_id, password_hash, role, name, department, room_counter) VALUES
+('doc_satish', 'password123', 'staff', 'Dr. Satish Kumar', 'General Medicine', 'Room 101'),
+('doc_ramesh', 'password123', 'staff', 'Dr. Ramesh Babu', 'General Medicine', 'Room 101'),
+('doc_lakshmi', 'password123', 'staff', 'Dr. Lakshmi Prasad', 'Cardiology', 'Room 102'),
+('doc_srinivas', 'password123', 'staff', 'Dr. K. Srinivas', 'ENT', 'Room 103'),
+('doc_venkat', 'password123', 'staff', 'Dr. P. Venkat', 'Orthopedics', 'Room 104'),
+('doc_lab', 'password123', 'staff', 'Dr. Lab Technician', 'Laboratory', 'Lab Counter 1'),
+('doc_pharm', 'password123', 'staff', 'Dr. Pharmacist', 'Pharmacy', 'Pharmacy Counter 2'),
+('receptionist', 'password123', 'receptionist', 'Reception Counter', 'Receptionist', 'Reception Desk 1')
+ON CONFLICT (staff_id) DO UPDATE SET password_hash = EXCLUDED.password_hash, name = EXCLUDED.name, department = EXCLUDED.department, room_counter = EXCLUDED.room_counter;

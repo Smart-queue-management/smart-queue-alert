@@ -37,6 +37,7 @@ var _AgenticChatbot = require("./components/AgenticChatbot");
 var _StaffDashboard = require("./screens/StaffDashboard");
 var _KioskFlow = require("./components/KioskFlow");
 var _PublicDisplay = require("./components/PublicDisplay");
+var _OperationsSummary = require("./components/OperationsSummary");
 
 var _supabaseClient = require("./services/supabaseClient");
 var _sonnerNative = require("sonner-native");
@@ -262,24 +263,26 @@ function AppContent() {
                                 
                                 // Map visits/journey from queue_visits relation
                                 const tokenVisits = dbVisits ? dbVisits.filter(v => v.token_id === row.token_id) : [];
-                                deserialized.visits = tokenVisits.map(v => {
-                                    const matchedDoc = dbDocs ? dbDocs.find(doc => doc.id === v.doctor_id) : null;
-                                    return {
-                                        id: v.id,
-                                        department_id: v.department_id,
-                                        department: v.department_id === 'gen_med' ? 'General Medicine' : 
-                                                    v.department_id === 'cardio' ? 'Cardiology' :
-                                                    v.department_id === 'ent' ? 'ENT' :
-                                                    v.department_id === 'ortho' ? 'Orthopedics' :
-                                                    v.department_id === 'lab' ? 'Laboratory' :
-                                                    v.department_id === 'pharm' ? 'Pharmacy' : v.department_id,
-                                        status: v.status,
-                                        room_counter: v.room_counter,
-                                        doctorName: matchedDoc ? matchedDoc.name : null,
-                                        notes: v.notes,
-                                        timestamp: v.created_at
-                                    };
-                                });
+                                if (tokenVisits.length > 0) {
+                                    deserialized.visits = tokenVisits.map(v => {
+                                        const matchedDoc = dbDocs ? dbDocs.find(doc => doc.id === v.doctor_id) : null;
+                                        return {
+                                            id: v.id,
+                                            department_id: v.department_id,
+                                            department: v.department_id === 'gen_med' ? 'General Medicine' : 
+                                                        v.department_id === 'cardio' ? 'Cardiology' :
+                                                        v.department_id === 'ent' ? 'ENT' :
+                                                        v.department_id === 'ortho' ? 'Orthopedics' :
+                                                        v.department_id === 'lab' ? 'Laboratory' :
+                                                        v.department_id === 'pharm' ? 'Pharmacy' : v.department_id,
+                                            status: v.status,
+                                            room_counter: v.room_counter,
+                                            doctorName: matchedDoc ? matchedDoc.name : null,
+                                            notes: v.notes,
+                                            timestamp: v.created_at
+                                        };
+                                    });
+                                }
                                 
                                 tokensToSet.push(deserialized);
                             }
@@ -868,6 +871,11 @@ function AppContent() {
       case "public-display":
         return /*#__PURE__*/ (0, _jsxRuntime.jsx)(
           _PublicDisplay.PublicDisplay,
+          {},
+        );
+      case "operations-summary":
+        return /*#__PURE__*/ (0, _jsxRuntime.jsx)(
+          _OperationsSummary.OperationsSummary,
           {},
         );
       case "token":

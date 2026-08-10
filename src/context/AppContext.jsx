@@ -3,6 +3,7 @@ var _translations = require("../translations/translations");
 
 var initialDepartments = exports.initialDepartments = [
     {
+        id: "gen_med",
         name: "General Medicine",
         type: "consultation",
         currentQueue: 12,
@@ -43,6 +44,7 @@ var initialDepartments = exports.initialDepartments = [
 
     },
     {
+        id: "ortho",
         name: "Orthopedics",
         type: "consultation",
         currentQueue: 5,
@@ -83,6 +85,7 @@ var initialDepartments = exports.initialDepartments = [
 
     },
     {
+        id: "cardio",
         name: "Cardiology",
         type: "consultation",
         currentQueue: 8,
@@ -123,6 +126,7 @@ var initialDepartments = exports.initialDepartments = [
 
     },
     {
+        id: "neuro",
         name: "Neurology",
         type: "consultation",
         currentQueue: 3,
@@ -154,6 +158,7 @@ var initialDepartments = exports.initialDepartments = [
 
     },
     {
+        id: "ped",
         name: "Pediatrics",
         type: "consultation",
         currentQueue: 7,
@@ -185,6 +190,7 @@ var initialDepartments = exports.initialDepartments = [
 
     },
     {
+        id: "lab",
         name: "Laboratory",
         type: "diagnostic",
         currentQueue: 15,
@@ -218,6 +224,7 @@ var initialDepartments = exports.initialDepartments = [
 
     },
     {
+        id: "pharm",
         name: "Pharmacy",
         type: "pharmacy",
         currentQueue: 8,
@@ -249,6 +256,7 @@ var initialDepartments = exports.initialDepartments = [
 
     },
     {
+        id: "rad",
         name: "Radiology",
         type: "diagnostic",
         currentQueue: 6,
@@ -276,6 +284,7 @@ var initialDepartments = exports.initialDepartments = [
 
     },
     {
+        id: "emg",
         name: "Emergency",
         type: "consultation",
         currentQueue: 2,
@@ -307,6 +316,7 @@ var initialDepartments = exports.initialDepartments = [
 
     },
     {
+        id: "rec",
         name: "Reception",
         type: "administrative",
         currentQueue: 0,

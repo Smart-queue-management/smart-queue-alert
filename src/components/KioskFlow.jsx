@@ -151,7 +151,17 @@ export function KioskFlow() {
             estimatedWaitTime: waitTime,
             positionInQueue: position,
             booking_type: 'kiosk',
-            visits: [],
+            visits: [{
+                id: `visit-kiosk-${Date.now()}`,
+                department_id: selectedDept.id || 'gen_med',
+                department: selectedDept.name,
+                status: 'waiting',
+                sequence_order: 1,
+                room_counter: null,
+                doctorName: null,
+                notes: null,
+                timestamp: now
+            }],
             prescriptions: [],
             labTests: [],
             departmentAccess: [selectedDept.name]

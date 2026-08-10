@@ -69,7 +69,7 @@ export function StaffDashboard() {
   // All active tokens
   const allActiveTokens = (appState.tokens || []).filter(t => {
     // Find active visit for this department
-    const v = (t.visits || []).find(visit => visit.department_id === staffDeptId && (visit.status === 'waiting' || visit.status === 'called'));
+    const v = (t.visits || []).find(visit => visit.department_id === staffDeptId && (visit.status === 'waiting' || visit.status === 'called' || visit.status === 'in_consultation'));
     return v !== undefined;
   }).sort((a, b) => {
     const pA = priorityMap[a.type] || 3;
@@ -92,6 +92,21 @@ export function StaffDashboard() {
   const [medicines, setMedicines] = useState([]);
   const [advice, setAdvice] = useState("");
   const [referralDeptId, setReferralDeptId] = useState("");
+
+  // Receptionist States
+  const [searchPhone, setSearchPhone] = useState("");
+  const [receptionPatient, setReceptionPatient] = useState({
+    name: "",
+    phone: "",
+    age: "",
+    gender: "unspecified",
+    type: "common",
+    primaryDepartment: "General Medicine",
+    assignedDoctor: ""
+  });
+  const [generatedKioskToken, setGeneratedKioskToken] = useState(null);
+  const [isSearching, setIsSearching] = useState(false);
+  const [receptionLoading, setReceptionLoading] = useState(false);
 
   // QR Scanner State
   const [scannerOpen, setScannerOpen] = useState(false);
@@ -156,6 +171,258 @@ export function StaffDashboard() {
     setDiagnosis("");
     setMedicines([]);
     setAdvice("");
+  };
+
+  // Receptionist Handlers
+  const handleSearchPatient = async () => {
+    if (!searchPhone.trim()) {
+      toast.error("Please enter a phone number to search");
+      return;
+    }
+    setIsSearching(true);
+    try {
+      const { data, error } = await supabase
+        .from('queue')
+        .select('*')
+        .eq('patient_phone', searchPhone)
+        .order('created_at', { ascending: false })
+        .limit(1);
+
+      if (error) throw error;
+
+      if (data && data.length > 0) {
+        const match = data[0];
+        setReceptionPatient(prev => ({
+          ...prev,
+          name: match.patient_name || "",
+          phone: match.patient_phone || searchPhone,
+          age: match.patient_age ? String(match.patient_age) : "",
+          gender: match.patient_gender || "unspecified"
+        }));
+        toast.success("Patient found!", { description: `Loaded details for ${match.patient_name}.` });
+      } else {
+        toast.error("No record found. Please enter details manually.");
+        setReceptionPatient(prev => ({
+          ...prev,
+          phone: searchPhone,
+          name: "",
+          age: "",
+          gender: "unspecified"
+        }));
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error("Search failed");
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  const handleReceptionGenerateToken = async () => {
+    if (!receptionPatient.name.trim()) {
+      toast.error("Patient Name is required");
+      return;
+    }
+    if (!receptionPatient.phone.trim()) {
+      toast.error("Phone Number is required");
+      return;
+    }
+
+    setReceptionLoading(true);
+    const now = new Date();
+    const scheduledTime = now;
+    
+    // Calculate incremental token number locally
+    const typeTokens = appState.tokens.filter(t => t.type === receptionPatient.type);
+    const tokenNumber = String(typeTokens.length + 1).padStart(3, '0');
+    const dateStr = now.toISOString().slice(0, 10).replace(/-/g, '');
+    const timeStr = now.toTimeString().slice(0, 8).replace(/:/g, '');
+    
+    const prefix = receptionPatient.type === 'emergency' ? 'EME' : receptionPatient.type === 'disabled' ? 'ACE' : 'GEN';
+    const tokenId = `${prefix}-${timeStr}-${tokenNumber}`;
+    const patientId = `PAT-ASSISTED-${dateStr}-${tokenNumber}`;
+    const endOfDay = new Date();
+    endOfDay.setHours(23, 59, 59, 999);
+
+    const deptObj = (appState.departments || []).find(d => d.name === receptionPatient.primaryDepartment) || { id: 'gen_med', name: 'General Medicine' };
+    const position = appState.tokens.filter(t => t.primaryDepartment === deptObj.name && t.status === 'waiting').length + 1;
+    const waitTime = position * (deptObj.average_wait_time || 15);
+
+    const newToken = {
+        id: tokenId,
+        type: receptionPatient.type,
+        primaryDepartment: deptObj.name,
+        timestamp: now,
+        scheduledTime: scheduledTime,
+        patient: {
+            name: receptionPatient.name,
+            email: '',
+            phone: receptionPatient.phone,
+            age: parseInt(receptionPatient.age || '0'),
+            gender: receptionPatient.gender,
+            patientId: patientId
+        },
+        status: 'waiting',
+        priority: receptionPatient.type === 'emergency' ? 1 : receptionPatient.type === 'disabled' ? 2 : 3,
+        qrCode: tokenId,
+        validUntil: endOfDay,
+        createdAt: now,
+        estimatedWaitTime: waitTime,
+        positionInQueue: position,
+        booking_type: 'assisted',
+        visits: [],
+        prescriptions: [],
+        labTests: [],
+        departmentAccess: [deptObj.name]
+    };
+
+    try {
+        // Save to database
+        const { error } = await supabase.from('queue').insert([{
+            token_id: tokenId,
+            patient_name: newToken.patient.name,
+            department: newToken.primaryDepartment,
+            status: 'waiting',
+            booking_type: 'assisted',
+            patient_phone: receptionPatient.phone,
+            patient_age: parseInt(receptionPatient.age || '0'),
+            patient_gender: receptionPatient.gender,
+            doctor_id: (receptionPatient.assignedDoctor && receptionPatient.assignedDoctor !== 'any') ? receptionPatient.assignedDoctor : null,
+            token_data: newToken
+        }]);
+
+        if (error) throw error;
+
+        // Insert into queue_visits relation
+        const { error: visitError } = await supabase.from('queue_visits').insert([{
+            token_id: tokenId,
+            department_id: deptObj.id,
+            doctor_id: (receptionPatient.assignedDoctor && receptionPatient.assignedDoctor !== 'any') ? receptionPatient.assignedDoctor : null,
+            status: 'waiting',
+            sequence_order: 1
+        }]);
+
+        if (visitError) throw visitError;
+
+        // Update app context optimistically
+        setAppState(prev => ({
+            ...prev,
+            tokens: [...prev.tokens, newToken]
+        }));
+
+        setGeneratedKioskToken(newToken);
+        toast.success("Token Generated Successfully!");
+    } catch (error) {
+        console.error('Assisted Token Generation Error:', error);
+        toast.error("Unable to generate the token. Please try again.");
+    } finally {
+        setReceptionLoading(false);
+    }
+  };
+
+  // Queue Transition Handlers
+  const handleStartConsultation = async () => {
+    if (!activePatient) return;
+
+    try {
+      const activeVisit = (activePatient.visits || []).find(v => v.department_id === staffDeptId && (v.status === 'waiting' || v.status === 'called'));
+      
+      if (activeVisit) {
+        await supabase
+          .from('queue_visits')
+          .update({ status: 'in_consultation' })
+          .eq('id', activeVisit.id);
+      }
+
+      const updatedTokenProps = { ...activePatient, status: "in_consultation" };
+      await supabase
+        .from('queue')
+        .update({ status: 'in_consultation', token_data: updatedTokenProps })
+        .eq('token_id', activePatient.id);
+
+      const updatedTokens = appState.tokens.map((token) =>
+        token.id === activePatient.id ? updatedTokenProps : token
+      );
+      setAppState((prev) => ({ ...prev, tokens: updatedTokens }));
+
+      toast.success("Consultation Started", {
+        description: `Consultation started with ${activePatient.patient?.name || "Patient"}.`,
+      });
+    } catch (error) {
+      console.error("Start consultation failed:", error);
+    }
+  };
+
+  const handleSkipPatient = async () => {
+    if (!activePatient) return;
+
+    try {
+      const activeVisit = (activePatient.visits || []).find(v => v.department_id === staffDeptId && (v.status === 'waiting' || v.status === 'called' || v.status === 'in_consultation'));
+      
+      if (activeVisit) {
+        await supabase
+          .from('queue_visits')
+          .update({ status: 'skipped' })
+          .eq('id', activeVisit.id);
+      }
+
+      const updatedTokenProps = { ...activePatient, status: "skipped" };
+      await supabase
+        .from('queue')
+        .update({ status: 'skipped', token_data: updatedTokenProps })
+        .eq('token_id', activePatient.id);
+
+      const updatedTokens = appState.tokens.map((token) =>
+        token.id === activePatient.id ? updatedTokenProps : token
+      );
+      setAppState((prev) => ({ ...prev, tokens: updatedTokens }));
+
+      toast.success("Patient Skipped", {
+        description: `${activePatient.patient?.name || "Patient"} has been skipped.`,
+      });
+
+      // Find next patient
+      const remainingTokens = allActiveTokens.filter(t => t.id !== activePatient.id);
+      setActivePatient(remainingTokens.length > 0 ? remainingTokens[0] : null);
+    } catch (error) {
+      console.error("Skip patient failed:", error);
+    }
+  };
+
+  const handleCancelToken = async () => {
+    if (!activePatient) return;
+
+    try {
+      const activeVisit = (activePatient.visits || []).find(v => v.department_id === staffDeptId && (v.status === 'waiting' || v.status === 'called' || v.status === 'in_consultation'));
+      
+      if (activeVisit) {
+        await supabase
+          .from('queue_visits')
+          .update({ status: 'cancelled' })
+          .eq('id', activeVisit.id);
+      }
+
+      const updatedTokenProps = { ...activePatient, status: "cancelled" };
+      await supabase
+        .from('queue')
+        .update({ status: 'cancelled', token_data: updatedTokenProps })
+        .eq('token_id', activePatient.id);
+
+      const updatedTokens = appState.tokens.map((token) =>
+        token.id === activePatient.id ? updatedTokenProps : token
+      );
+      setAppState((prev) => ({ ...prev, tokens: updatedTokens }));
+
+      toast.success("Token Cancelled", {
+        description: `Token ${activePatient.id} has been cancelled.`,
+      });
+
+      // Find next patient
+      const remainingTokens = allActiveTokens.filter(t => t.id !== activePatient.id);
+      setActivePatient(remainingTokens.length > 0 ? remainingTokens[0] : null);
+    } catch (error) {
+      console.error("Cancel token failed:", error);
+    }
   };
 
   const handleCallPatient = async () => {
@@ -418,6 +685,168 @@ export function StaffDashboard() {
     return { bg: "#f0f9ff", text: "#0ea5e9", border: "#bae6fd", name: "General" };
   };
 
+  const isReceptionist = appState.staffInfo?.department === 'Receptionist' || appState.staffInfo?.role === 'receptionist';
+
+  if (isReceptionist) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <View style={styles.headerTop}>
+            <TouchableOpacity onPress={handleBack} style={styles.backBtn}>
+              <ArrowLeft size={24} color="#1e293b" />
+            </TouchableOpacity>
+            <View style={styles.headerInfo}>
+              <Text style={styles.dashboardTitle}>Assisted Registration</Text>
+              <Text style={styles.doctorName}>Reception / Helpdesk Desk</Text>
+            </View>
+          </View>
+        </View>
+
+        <ScrollView contentContainerStyle={styles.scrollContent}>
+          {generatedKioskToken ? (
+            <Card style={{ padding: 24, borderRadius: 16, backgroundColor: '#f0fdf4', borderColor: '#bbf7d0', borderWidth: 2, alignItems: 'center' }}>
+              <CheckCircle2 size={64} color="#16a34a" style={{ marginBottom: 16 }} />
+              <Text style={{ fontSize: 22, fontWeight: 'bold', color: '#16a34a', marginBottom: 8 }}>TOKEN GENERATED</Text>
+              
+              <View style={{ backgroundColor: '#fff', padding: 20, borderRadius: 12, width: '100%', alignItems: 'center', marginVertical: 16, borderWidth: 1, borderColor: '#cbd5e1' }}>
+                <Text style={{ fontSize: 13, color: '#64748b', fontWeight: 'bold' }}>PATIENT NAME</Text>
+                <Text style={{ fontSize: 20, fontWeight: 'bold', color: '#0f172a', marginBottom: 12 }}>{generatedKioskToken.patient.name}</Text>
+                
+                <Text style={{ fontSize: 13, color: '#64748b', fontWeight: 'bold' }}>TOKEN ID</Text>
+                <Text style={{ fontSize: 36, fontWeight: '900', color: '#2563eb', letterSpacing: 1 }}>{generatedKioskToken.id}</Text>
+                
+                <Text style={{ fontSize: 13, color: '#64748b', fontWeight: 'bold', marginTop: 12 }}>CLINIC / DEPT</Text>
+                <Text style={{ fontSize: 16, fontWeight: 'bold', color: '#0f172a' }}>{generatedKioskToken.primaryDepartment}</Text>
+              </View>
+
+              <TouchableOpacity 
+                style={{ backgroundColor: '#2563eb', paddingVertical: 14, paddingHorizontal: 32, borderRadius: 8, marginTop: 8 }}
+                onPress={() => setGeneratedKioskToken(null)}
+              >
+                <Text style={{ color: '#fff', fontSize: 16, fontWeight: 'bold' }}>Register Next Patient</Text>
+              </TouchableOpacity>
+            </Card>
+          ) : (
+            <View style={{ gap: 16 }}>
+              {/* Search Section */}
+              <Card style={{ padding: 16, borderRadius: 12 }}>
+                <Text style={{ fontSize: 15, fontWeight: 'bold', color: '#1e293b', marginBottom: 8 }}>Search Existing Patient</Text>
+                <View style={{ flexDirection: 'row', gap: 10 }}>
+                  <TextInput
+                    style={{ flex: 1, borderWidth: 1, borderColor: '#cbd5e1', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10, fontSize: 15, backgroundColor: '#fff', color: '#1e293b' }}
+                    placeholder="Enter phone number"
+                    value={searchPhone}
+                    onChangeText={setSearchPhone}
+                    keyboardType="phone-pad"
+                  />
+                  <TouchableOpacity 
+                    style={{ backgroundColor: '#0ea5e9', justifyContent: 'center', paddingHorizontal: 20, borderRadius: 8 }}
+                    onPress={handleSearchPatient}
+                    disabled={isSearching}
+                  >
+                    <Text style={{ color: '#fff', fontWeight: 'bold' }}>{isSearching ? "Searching..." : "Search"}</Text>
+                  </TouchableOpacity>
+                </View>
+              </Card>
+
+              {/* Patient Form Section */}
+              <Card style={{ padding: 16, borderRadius: 12, gap: 12 }}>
+                <Text style={{ fontSize: 15, fontWeight: 'bold', color: '#1e293b', marginBottom: 4 }}>Basic Patient Details</Text>
+                
+                <View>
+                  <Text style={styles.formLabel}>Full Name</Text>
+                  <TextInput
+                    style={styles.formInput}
+                    placeholder="Enter patient full name"
+                    value={receptionPatient.name}
+                    onChangeText={(val) => setReceptionPatient(p => ({ ...p, name: val }))}
+                  />
+                </View>
+
+                <View>
+                  <Text style={styles.formLabel}>Phone Number</Text>
+                  <TextInput
+                    style={styles.formInput}
+                    placeholder="Enter phone number"
+                    value={receptionPatient.phone}
+                    onChangeText={(val) => setReceptionPatient(p => ({ ...p, phone: val }))}
+                    keyboardType="phone-pad"
+                  />
+                </View>
+
+                <View style={{ flexDirection: 'row', gap: 12 }}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.formLabel}>Age (Yrs)</Text>
+                    <TextInput
+                      style={styles.formInput}
+                      placeholder="Age"
+                      value={receptionPatient.age}
+                      onChangeText={(val) => setReceptionPatient(p => ({ ...p, age: val }))}
+                      keyboardType="numeric"
+                    />
+                  </View>
+
+                  <View style={{ flex: 1.5 }}>
+                    <Text style={styles.formLabel}>Gender</Text>
+                    <Select value={receptionPatient.gender} onValueChange={(val) => setReceptionPatient(p => ({ ...p, gender: val }))}>
+                      <SelectTrigger style={{ height: 44, borderColor: '#cbd5e1', borderWidth: 1, borderRadius: 8, paddingHorizontal: 12 }}>
+                        <SelectValue placeholder="Gender" />
+                      </SelectTrigger>
+                      <SelectContent style={{ backgroundColor: '#fff' }}>
+                        <SelectItem value="male">Male</SelectItem>
+                        <SelectItem value="female">Female</SelectItem>
+                        <SelectItem value="other">Other</SelectItem>
+                        <SelectItem value="unspecified">Unspecified</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </View>
+                </View>
+
+                <View>
+                  <Text style={styles.formLabel}>Service Type / Category</Text>
+                  <Select value={receptionPatient.type} onValueChange={(val) => setReceptionPatient(p => ({ ...p, type: val }))}>
+                    <SelectTrigger style={{ height: 44, borderColor: '#cbd5e1', borderWidth: 1, borderRadius: 8, paddingHorizontal: 12 }}>
+                      <SelectValue placeholder="Category" />
+                    </SelectTrigger>
+                    <SelectContent style={{ backgroundColor: '#fff' }}>
+                      <SelectItem value="common">General Booking</SelectItem>
+                      <SelectItem value="emergency">Emergency Booking</SelectItem>
+                      <SelectItem value="disabled">Accessibility Booking</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </View>
+
+                <View>
+                  <Text style={styles.formLabel}>Clinic / Department</Text>
+                  <Select value={receptionPatient.primaryDepartment} onValueChange={(val) => setReceptionPatient(p => ({ ...p, primaryDepartment: val }))}>
+                    <SelectTrigger style={{ height: 44, borderColor: '#cbd5e1', borderWidth: 1, borderRadius: 8, paddingHorizontal: 12 }}>
+                      <SelectValue placeholder="Select Clinic" />
+                    </SelectTrigger>
+                    <SelectContent style={{ backgroundColor: '#fff' }}>
+                      {(appState.departments || []).map(d => (
+                        <SelectItem key={d.id} value={d.name}>{d.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </View>
+
+                <TouchableOpacity 
+                  style={{ backgroundColor: '#16a34a', paddingVertical: 14, borderRadius: 8, alignItems: 'center', marginTop: 12 }}
+                  onPress={handleReceptionGenerateToken}
+                  disabled={receptionLoading}
+                >
+                  <Text style={{ color: '#fff', fontSize: 16, fontWeight: 'bold' }}>
+                    {receptionLoading ? "Generating Token..." : "Generate Token & Print"}
+                  </Text>
+                </TouchableOpacity>
+              </Card>
+            </View>
+          )}
+        </ScrollView>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.container}>
       {/* 1. HEADER */}
@@ -485,41 +914,80 @@ export function StaffDashboard() {
               </View>
             </Card>
 
-            {/* Referral Dropdown */}
-            <View style={{ marginBottom: 16 }}>
-              <Text style={{ fontSize: 14, fontWeight: '700', color: '#475569', marginBottom: 6 }}>Refer Patient to Clinic / Department:</Text>
-              <Select value={referralDeptId} onValueChange={setReferralDeptId}>
-                <SelectTrigger style={{ backgroundColor: '#fff', borderColor: '#cbd5e1', borderWidth: 1, borderRadius: 8, padding: 12 }}>
-                  <SelectValue placeholder="Select Clinic / Department (Optional)" />
-                </SelectTrigger>
-                <SelectContent style={{ backgroundColor: '#fff' }}>
-                  <SelectItem value="">None (Consultation Completed)</SelectItem>
-                  {(appState.departments || []).filter(d => d.id !== staffDeptId).map(d => (
-                    <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </View>
+            {/* Referral Dropdown (Only show in consultation) */}
+            {activePatient.status === 'in_consultation' && (
+              <View style={{ marginBottom: 16 }}>
+                <Text style={{ fontSize: 14, fontWeight: '700', color: '#475569', marginBottom: 6 }}>Refer Patient to Clinic / Department:</Text>
+                <Select value={referralDeptId} onValueChange={setReferralDeptId}>
+                  <SelectTrigger style={{ backgroundColor: '#fff', borderColor: '#cbd5e1', borderWidth: 1, borderRadius: 8, padding: 12 }}>
+                    <SelectValue placeholder="Select Clinic / Department (Optional)" />
+                  </SelectTrigger>
+                  <SelectContent style={{ backgroundColor: '#fff' }}>
+                    <SelectItem value="">None (Consultation Completed)</SelectItem>
+                    {(appState.departments || []).filter(d => d.id !== staffDeptId).map(d => (
+                      <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </View>
+            )}
 
             {/* 3. MAIN ACTION AREA */}
             <View style={styles.mainActionArea}>
-              <TouchableOpacity
-                style={[styles.primaryActionBtn, prescriptionMode ? styles.activeActionBtn : null]}
-                onPress={() => setPrescriptionMode(prescriptionMode ? null : 'template')}
-              >
-                <FileText size={20} color={prescriptionMode ? "#fff" : "#2563eb"} />
-                <Text style={[styles.primaryActionText, prescriptionMode && { color: "#fff" }]}>Prescription</Text>
-              </TouchableOpacity>
+              {activePatient.status === 'waiting' && (
+                <>
+                  <TouchableOpacity style={[styles.completeBtn, { backgroundColor: '#ea580c', flex: 1.5 }]} onPress={handleCallPatient}>
+                    <Volume2 size={24} color="#fff" />
+                    <Text style={styles.completeBtnText}>Call Patient</Text>
+                  </TouchableOpacity>
 
-              <TouchableOpacity style={[styles.completeBtn, { backgroundColor: '#ea580c' }]} onPress={handleCallPatient}>
-                <Volume2 size={24} color="#fff" />
-                <Text style={styles.completeBtnText}>Call Patient</Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity style={styles.completeBtn} onPress={handleMarkComplete}>
-                <CheckCircle2 size={24} color="#fff" />
-                <Text style={styles.completeBtnText}>Complete</Text>
-              </TouchableOpacity>
+                  <TouchableOpacity style={[styles.completeBtn, { backgroundColor: '#eab308', flex: 1 }]} onPress={handleSkipPatient}>
+                    <Text style={styles.completeBtnText}>Skip</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity style={[styles.completeBtn, { backgroundColor: '#dc2626', flex: 1 }]} onPress={handleCancelToken}>
+                    <Text style={styles.completeBtnText}>Cancel</Text>
+                  </TouchableOpacity>
+                </>
+              )}
+
+              {activePatient.status === 'called' && (
+                <>
+                  <TouchableOpacity style={[styles.completeBtn, { backgroundColor: '#2563eb', flex: 1.5 }]} onPress={handleStartConsultation}>
+                    <Stethoscope size={24} color="#fff" />
+                    <Text style={styles.completeBtnText}>Start Consult</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity style={[styles.completeBtn, { backgroundColor: '#eab308', flex: 1 }]} onPress={handleSkipPatient}>
+                    <Text style={styles.completeBtnText}>Skip</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity style={[styles.completeBtn, { backgroundColor: '#dc2626', flex: 1 }]} onPress={handleCancelToken}>
+                    <Text style={styles.completeBtnText}>Cancel</Text>
+                  </TouchableOpacity>
+                </>
+              )}
+
+              {activePatient.status === 'in_consultation' && (
+                <>
+                  <TouchableOpacity
+                    style={[styles.primaryActionBtn, prescriptionMode ? styles.activeActionBtn : null]}
+                    onPress={() => setPrescriptionMode(prescriptionMode ? null : 'template')}
+                  >
+                    <FileText size={20} color={prescriptionMode ? "#fff" : "#2563eb"} />
+                    <Text style={[styles.primaryActionText, prescriptionMode && { color: "#fff" }]}>Prescription</Text>
+                  </TouchableOpacity>
+                  
+                  <TouchableOpacity style={styles.completeBtn} onPress={handleMarkComplete}>
+                    <CheckCircle2 size={24} color="#fff" />
+                    <Text style={styles.completeBtnText}>Complete</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity style={[styles.completeBtn, { backgroundColor: '#dc2626', flex: 0.5 }]} onPress={handleCancelToken}>
+                    <Text style={styles.completeBtnText}>Cancel</Text>
+                  </TouchableOpacity>
+                </>
+              )}
             </View>
 
             {/* QR Scanner Section */}
@@ -1141,4 +1609,6 @@ const styles = StyleSheet.create({
   emptyState: { alignItems: "center", justifyContent: "center", padding: 40, backgroundColor: "#fff", borderRadius: 16, marginBottom: 24, borderWidth: 1, borderColor: "#e2e8f0" },
   emptyTitle: { fontSize: 22, fontWeight: "700", color: "#0f172a", marginBottom: 8 },
   emptySub: { fontSize: 15, color: "#64748b", textAlign: "center" },
+  formLabel: { fontSize: 13, fontWeight: '600', color: '#475569', marginBottom: 4 },
+  formInput: { borderWidth: 1, borderColor: '#cbd5e1', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10, fontSize: 15, backgroundColor: '#fff', color: '#1e293b' },
 });

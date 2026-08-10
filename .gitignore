@@ -3,4 +3,5 @@ venv
 .expo
 dist
 *.log
+.env
 backend - Copy*

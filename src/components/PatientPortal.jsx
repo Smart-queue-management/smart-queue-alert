@@ -49,6 +49,10 @@ function PatientPortal() {
         setState(function (prev) { return Object.assign({}, prev, { currentView: 'public-display' }); });
     };
 
+    var handleContinueAsOperations = function handleContinueAsOperations() {
+        setState(function (prev) { return Object.assign({}, prev, { currentView: 'operations-summary' }); });
+    };
+
     var isLarge = state.accessibilityMode === 'high-contrast';
 
     return (/*#__PURE__*/
@@ -206,8 +210,18 @@ function PatientPortal() {
                                                 (0, _jsxRuntime.jsx)(_lucideReactNative.ArrowRight, { size: 20, color: "#ffffff", style: { marginLeft: 12 } })]
                                         }
                                         )
-                                }
-                                )
+                                }),/*#__PURE__*/
+
+                                (0, _jsxRuntime.jsx)(_button.Button, {
+                                    onPress: handleContinueAsOperations, style: [styles.continueBtn, { backgroundColor: '#7c3aed', shadowColor: '#7c3aed' }], children:/*#__PURE__*/
+                                        (0, _jsxRuntime.jsxs)(_reactNative.View, {
+                                            style: styles.btnContent, children: [/*#__PURE__*/
+                                                (0, _jsxRuntime.jsx)(_lucideReactNative.BarChart2, { size: 20, color: "#ffffff", style: { marginRight: 12 } }),/*#__PURE__*/
+                                                (0, _jsxRuntime.jsx)(_reactNative.Text, { style: [styles.btnText, isLarge && { fontSize: 20 }], children: "Operations Dashboard" }),/*#__PURE__*/
+                                                (0, _jsxRuntime.jsx)(_lucideReactNative.ArrowRight, { size: 20, color: "#ffffff", style: { marginLeft: 12 } })]
+                                        }
+                                        )
+                                })
                                 ]
                         }
                         )
