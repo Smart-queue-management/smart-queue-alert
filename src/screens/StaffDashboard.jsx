@@ -108,6 +108,9 @@ export function StaffDashboard() {
   const [isSearching, setIsSearching] = useState(false);
   const [receptionLoading, setReceptionLoading] = useState(false);
 
+  // Processing state for action button protection
+  const [isProcessing, setIsProcessing] = useState(false);
+
   // QR Scanner State
   const [scannerOpen, setScannerOpen] = useState(false);
   const [lastScannedPatient, setLastScannedPatient] = useState(null);
@@ -322,7 +325,8 @@ export function StaffDashboard() {
 
   // Queue Transition Handlers
   const handleStartConsultation = async () => {
-    if (!activePatient) return;
+    if (!activePatient || isProcessing) return;
+    setIsProcessing(true);
 
     try {
       const activeVisit = (activePatient.visits || []).find(v => v.department_id === staffDeptId && (v.status === 'waiting' || v.status === 'called'));
@@ -350,11 +354,15 @@ export function StaffDashboard() {
       });
     } catch (error) {
       console.error("Start consultation failed:", error);
+      toast.error("Error", { description: "Something went wrong. Please try again." });
+    } finally {
+      setIsProcessing(false);
     }
   };
 
   const handleSkipPatient = async () => {
-    if (!activePatient) return;
+    if (!activePatient || isProcessing) return;
+    setIsProcessing(true);
 
     try {
       const activeVisit = (activePatient.visits || []).find(v => v.department_id === staffDeptId && (v.status === 'waiting' || v.status === 'called' || v.status === 'in_consultation'));
@@ -386,11 +394,15 @@ export function StaffDashboard() {
       setActivePatient(remainingTokens.length > 0 ? remainingTokens[0] : null);
     } catch (error) {
       console.error("Skip patient failed:", error);
+      toast.error("Error", { description: "Something went wrong. Please try again." });
+    } finally {
+      setIsProcessing(false);
     }
   };
 
   const handleCancelToken = async () => {
-    if (!activePatient) return;
+    if (!activePatient || isProcessing) return;
+    setIsProcessing(true);
 
     try {
       const activeVisit = (activePatient.visits || []).find(v => v.department_id === staffDeptId && (v.status === 'waiting' || v.status === 'called' || v.status === 'in_consultation'));
@@ -422,11 +434,15 @@ export function StaffDashboard() {
       setActivePatient(remainingTokens.length > 0 ? remainingTokens[0] : null);
     } catch (error) {
       console.error("Cancel token failed:", error);
+      toast.error("Error", { description: "Something went wrong. Please try again." });
+    } finally {
+      setIsProcessing(false);
     }
   };
 
   const handleCallPatient = async () => {
-    if (!activePatient) return;
+    if (!activePatient || isProcessing) return;
+    setIsProcessing(true);
     
     const roomCounter = appState.staffInfo?.room_counter || 'Room 101';
 
@@ -499,11 +515,14 @@ export function StaffDashboard() {
     } catch (error) {
       console.error("Call handling failed:", error);
       toast.error("Error", { description: "Something went wrong. Please try again." });
+    } finally {
+      setIsProcessing(false);
     }
   };
 
   const handleMarkComplete = async () => {
-    if (!activePatient) return;
+    if (!activePatient || isProcessing) return;
+    setIsProcessing(true);
 
     try {
       // 1. Find active visit in queue_visits for this doctor's clinic
@@ -598,6 +617,8 @@ export function StaffDashboard() {
     } catch (error) {
       console.error("Complete handling failed:", error);
       toast.error("Error", { description: "Something went wrong. Please try again." });
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -936,34 +957,34 @@ export function StaffDashboard() {
             <View style={styles.mainActionArea}>
               {activePatient.status === 'waiting' && (
                 <>
-                  <TouchableOpacity style={[styles.completeBtn, { backgroundColor: '#ea580c', flex: 1.5 }]} onPress={handleCallPatient}>
+                  <TouchableOpacity style={[styles.completeBtn, { backgroundColor: '#ea580c', flex: 1.5, opacity: isProcessing ? 0.6 : 1 }]} onPress={handleCallPatient} disabled={isProcessing}>
                     <Volume2 size={24} color="#fff" />
-                    <Text style={styles.completeBtnText}>Call Patient</Text>
+                    <Text style={styles.completeBtnText}>{isProcessing ? 'Calling...' : 'Call Patient'}</Text>
                   </TouchableOpacity>
 
-                  <TouchableOpacity style={[styles.completeBtn, { backgroundColor: '#eab308', flex: 1 }]} onPress={handleSkipPatient}>
-                    <Text style={styles.completeBtnText}>Skip</Text>
+                  <TouchableOpacity style={[styles.completeBtn, { backgroundColor: '#eab308', flex: 1, opacity: isProcessing ? 0.6 : 1 }]} onPress={handleSkipPatient} disabled={isProcessing}>
+                    <Text style={styles.completeBtnText}>{isProcessing ? 'Skipping...' : 'Skip'}</Text>
                   </TouchableOpacity>
 
-                  <TouchableOpacity style={[styles.completeBtn, { backgroundColor: '#dc2626', flex: 1 }]} onPress={handleCancelToken}>
-                    <Text style={styles.completeBtnText}>Cancel</Text>
+                  <TouchableOpacity style={[styles.completeBtn, { backgroundColor: '#dc2626', flex: 1, opacity: isProcessing ? 0.6 : 1 }]} onPress={handleCancelToken} disabled={isProcessing}>
+                    <Text style={styles.completeBtnText}>{isProcessing ? 'Cancelling...' : 'Cancel'}</Text>
                   </TouchableOpacity>
                 </>
               )}
 
               {activePatient.status === 'called' && (
                 <>
-                  <TouchableOpacity style={[styles.completeBtn, { backgroundColor: '#2563eb', flex: 1.5 }]} onPress={handleStartConsultation}>
+                  <TouchableOpacity style={[styles.completeBtn, { backgroundColor: '#2563eb', flex: 1.5, opacity: isProcessing ? 0.6 : 1 }]} onPress={handleStartConsultation} disabled={isProcessing}>
                     <Stethoscope size={24} color="#fff" />
-                    <Text style={styles.completeBtnText}>Start Consult</Text>
+                    <Text style={styles.completeBtnText}>{isProcessing ? 'Starting...' : 'Start Consult'}</Text>
                   </TouchableOpacity>
 
-                  <TouchableOpacity style={[styles.completeBtn, { backgroundColor: '#eab308', flex: 1 }]} onPress={handleSkipPatient}>
-                    <Text style={styles.completeBtnText}>Skip</Text>
+                  <TouchableOpacity style={[styles.completeBtn, { backgroundColor: '#eab308', flex: 1, opacity: isProcessing ? 0.6 : 1 }]} onPress={handleSkipPatient} disabled={isProcessing}>
+                    <Text style={styles.completeBtnText}>{isProcessing ? 'Skipping...' : 'Skip'}</Text>
                   </TouchableOpacity>
 
-                  <TouchableOpacity style={[styles.completeBtn, { backgroundColor: '#dc2626', flex: 1 }]} onPress={handleCancelToken}>
-                    <Text style={styles.completeBtnText}>Cancel</Text>
+                  <TouchableOpacity style={[styles.completeBtn, { backgroundColor: '#dc2626', flex: 1, opacity: isProcessing ? 0.6 : 1 }]} onPress={handleCancelToken} disabled={isProcessing}>
+                    <Text style={styles.completeBtnText}>{isProcessing ? 'Cancelling...' : 'Cancel'}</Text>
                   </TouchableOpacity>
                 </>
               )}
@@ -978,13 +999,13 @@ export function StaffDashboard() {
                     <Text style={[styles.primaryActionText, prescriptionMode && { color: "#fff" }]}>Prescription</Text>
                   </TouchableOpacity>
                   
-                  <TouchableOpacity style={styles.completeBtn} onPress={handleMarkComplete}>
+                  <TouchableOpacity style={[styles.completeBtn, { opacity: isProcessing ? 0.6 : 1 }]} onPress={handleMarkComplete} disabled={isProcessing}>
                     <CheckCircle2 size={24} color="#fff" />
-                    <Text style={styles.completeBtnText}>Complete</Text>
+                    <Text style={styles.completeBtnText}>{isProcessing ? 'Completing...' : 'Complete'}</Text>
                   </TouchableOpacity>
 
-                  <TouchableOpacity style={[styles.completeBtn, { backgroundColor: '#dc2626', flex: 0.5 }]} onPress={handleCancelToken}>
-                    <Text style={styles.completeBtnText}>Cancel</Text>
+                  <TouchableOpacity style={[styles.completeBtn, { backgroundColor: '#dc2626', flex: 0.5, opacity: isProcessing ? 0.6 : 1 }]} onPress={handleCancelToken} disabled={isProcessing}>
+                    <Text style={styles.completeBtnText}>{isProcessing ? 'Cancelling...' : 'Cancel'}</Text>
                   </TouchableOpacity>
                 </>
               )}
@@ -1232,7 +1253,7 @@ export function StaffDashboard() {
           <View style={styles.emptyState}>
             <CheckCircle2 size={64} color="#22c55e" style={{ marginBottom: 16 }} />
             <Text style={styles.emptyTitle}>Queue Clear</Text>
-            <Text style={styles.emptySub}>No patients waiting for consultation.</Text>
+            <Text style={styles.emptySub}>No patients are currently waiting in your department.</Text>
           </View>
         )}
 

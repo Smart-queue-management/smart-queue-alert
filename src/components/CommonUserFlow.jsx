@@ -50,6 +50,9 @@ function CommonUserFlow() {
         queuePosition: 0
     }), _useState4 = (0, _slicedToArray2.default)(_useState3, 2), formData = _useState4[0], setFormData = _useState4[1];
 
+    // Duplicate-submit protection
+    var _useState5b = (0, _react.useState)(false), _useState6b = (0, _slicedToArray2.default)(_useState5b, 2), isBooking = _useState6b[0], setIsBooking = _useState6b[1];
+
 
 
     (0, _react.useEffect)(function () {
@@ -103,6 +106,8 @@ function CommonUserFlow() {
         endOfDay.setHours(23, 59, 59, 999);
         var patientId = `PAT-${dateStr}-${tokenNumber}`;
         var allDepartmentNames = state.departments.map(function (d) { return d.name; });
+        const deptObjForVisit = state.departments.find(d => d.name === formData.primaryDepartment);
+        const deptIdForVisit = deptObjForVisit ? deptObjForVisit.id : 'gen_med';
 
         return {
             id: tokenId,
@@ -126,7 +131,17 @@ function CommonUserFlow() {
             schedulingMethod: formData.schedulingMethod,
             estimatedWaitTime: formData.estimatedWait,
             positionInQueue: formData.queuePosition,
-            visits: [],
+            visits: [{
+                id: 'visit-' + Date.now(),
+                department_id: deptIdForVisit,
+                department: formData.primaryDepartment,
+                status: 'waiting',
+                sequence_order: 1,
+                room_counter: null,
+                doctorName: null,
+                notes: null,
+                timestamp: now
+            }],
             prescriptions: [],
             labTests: [],
             departmentAccess: allDepartmentNames
@@ -134,9 +149,11 @@ function CommonUserFlow() {
     };
 
     var handleTokenGeneration = function handleTokenGeneration() {
+        if (isBooking) return;
         if (formData.schedulingMethod === 'manual' && !formData.timeSlot) {
             return;
         }
+        setIsBooking(true);
         try {
             var newToken = generateToken();
             var _supabaseClient = require("../services/supabaseClient");
@@ -181,6 +198,7 @@ function CommonUserFlow() {
             );
         } catch (error) {
             console.log(error);
+            setIsBooking(false);
         }
     };
 
@@ -456,8 +474,8 @@ function CommonUserFlow() {
                                 }
                                 ),/*#__PURE__*/
                                 (0, _jsxRuntime.jsx)(_button.Button, {
-                                    onPress: handleTokenGeneration, disabled: !formData.timeSlot, style: { marginTop: 16 }, children:/*#__PURE__*/
-                                        (0, _jsxRuntime.jsx)(_reactNative.Text, { style: { color: '#fff' }, children: t.bookAppointment })
+                                    onPress: handleTokenGeneration, disabled: !formData.timeSlot || isBooking, style: { marginTop: 16 }, children:/*#__PURE__*/
+                                        (0, _jsxRuntime.jsx)(_reactNative.Text, { style: { color: '#fff' }, children: isBooking ? 'Generating token...' : t.bookAppointment })
                                 }
                                 )]
                         }

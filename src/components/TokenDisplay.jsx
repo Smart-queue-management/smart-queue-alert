@@ -35,7 +35,7 @@ function TokenDisplay(_ref) {
     }, [token]);
 
     // Calculate live queue position based on queue_visits for the current department
-    const currentActiveVisit = token ? (token.visits || []).find(v => v.status === 'waiting' || v.status === 'called') : null;
+    const currentActiveVisit = token ? (token.visits || []).find(v => v.status === 'waiting' || v.status === 'called' || v.status === 'in_consultation') : null;
     const currentDeptId = currentActiveVisit ? currentActiveVisit.department_id : (token ? (token.primaryDepartment === 'General Medicine' ? 'gen_med' : token.primaryDepartment === 'Cardiology' ? 'cardio' : token.primaryDepartment === 'ENT' ? 'ent' : token.primaryDepartment === 'Orthopedics' ? 'ortho' : token.primaryDepartment === 'Laboratory' ? 'lab' : token.primaryDepartment === 'Pharmacy' ? 'pharm' : 'gen_med') : 'gen_med');
     const currentDeptName = currentActiveVisit ? currentActiveVisit.department : (token ? token.primaryDepartment : 'General Medicine');
 
@@ -84,7 +84,9 @@ function TokenDisplay(_ref) {
         notificationFeed.push({ id: '1', text: `Token ${token.id} generated for ${token.primaryDepartment}.`, time: new Date(token.timestamp) });
         (token.visits || []).forEach((v, idx) => {
             if (v.status === 'called') {
-                notificationFeed.push({ id: `call_${idx}`, text: `Called to ${v.department} (${v.room_counter || 'Room 101'}).`, time: v.called_at ? new Date(v.called_at) : new Date() });
+                notificationFeed.push({ id: `call_${idx}`, text: `Called to ${v.department} (${v.room_counter || '\u2014'}).`, time: v.called_at ? new Date(v.called_at) : new Date() });
+            } else if (v.status === 'in_consultation') {
+                notificationFeed.push({ id: `consult_${idx}`, text: `Consultation in progress at ${v.department}.`, time: v.called_at ? new Date(v.called_at) : new Date() });
             } else if (v.status === 'completed') {
                 notificationFeed.push({ id: `comp_${idx}`, text: `Completed consultation in ${v.department}.`, time: v.completed_at ? new Date(v.completed_at) : new Date() });
             }
@@ -243,7 +245,10 @@ function TokenDisplay(_ref) {
                                                                         (0, _jsxRuntime.jsxs)(_reactNative.Text, { style: { fontSize: 16, fontWeight: '700', color: '#475569', marginBottom: 12 }, children: ["Current Department: ", currentDeptName] }),
                                                                         tokenStatus === 'called' ? (0, _jsxRuntime.jsxs)(_jsxRuntime.Fragment, { children: [
                                                                             (0, _jsxRuntime.jsx)(_reactNative.Text, { style: { fontSize: 24, fontWeight: '900', color: '#16a34a', textAlign: 'center' }, children: "YOUR TURN / మీ వంతు వచ్చింది" }),
-                                                                            (0, _jsxRuntime.jsxs)(_reactNative.Text, { style: { fontSize: 18, fontWeight: 'bold', color: '#15803d', marginTop: 8, textAlign: 'center' }, children: ["Please proceed to: ", displayRoom || 'Room 101'] })
+                                                                            (0, _jsxRuntime.jsxs)(_reactNative.Text, { style: { fontSize: 18, fontWeight: 'bold', color: '#15803d', marginTop: 8, textAlign: 'center' }, children: ["Please proceed to: ", displayRoom || '\u2014'] })
+                                                                        ]}) : tokenStatus === 'in_consultation' ? (0, _jsxRuntime.jsxs)(_jsxRuntime.Fragment, { children: [
+                                                                            (0, _jsxRuntime.jsx)(_reactNative.Text, { style: { fontSize: 20, fontWeight: '800', color: '#7c3aed' }, children: "In Consultation" }),
+                                                                            (0, _jsxRuntime.jsx)(_reactNative.Text, { style: { fontSize: 14, color: '#6d28d9', marginTop: 4 }, children: "Please wait while the doctor attends to you." })
                                                                         ]}) : tokenStatus === 'completed' ? (0, _jsxRuntime.jsx)(_reactNative.Text, { style: { fontSize: 20, fontWeight: '800', color: '#475569' }, children: "Consultation Completed / పూర్తయింది" }) : (0, _jsxRuntime.jsxs)(_jsxRuntime.Fragment, { children: [
                                                                             (0, _jsxRuntime.jsx)(_reactNative.Text, { style: { fontSize: 18, fontWeight: '800', color: '#0369a1' }, children: "Status: Waiting / నిరీక్షణ" }),
                                                                             (0, _jsxRuntime.jsxs)(_reactNative.View, { 
@@ -391,8 +396,8 @@ function TokenDisplay(_ref) {
                                                                                         style: { flexDirection: 'row', alignItems: 'center', gap: 6 },
                                                                                         children: [
                                                                                             (0, _jsxRuntime.jsx)(_reactNative.Text, { 
-                                                                                                style: { fontSize: 13, fontWeight: 'bold', color: visit.status === 'completed' ? '#16a34a' : visit.status === 'called' ? '#ea580c' : '#2563eb' },
-                                                                                                children: visit.status === 'completed' ? '✓ Completed' : visit.status === 'called' ? '● Serving' : '● Waiting'
+                                                                                                style: { fontSize: 13, fontWeight: 'bold', color: visit.status === 'completed' ? '#16a34a' : visit.status === 'called' ? '#ea580c' : visit.status === 'in_consultation' ? '#7c3aed' : visit.status === 'pending' ? '#94a3b8' : '#2563eb' },
+                                                                                                children: visit.status === 'completed' ? '✓ Completed' : visit.status === 'called' ? '● Your Turn' : visit.status === 'in_consultation' ? '● In Consultation' : visit.status === 'pending' ? '○ Pending' : '● Waiting'
                                                                                             })
                                                                                         ]
                                                                                     })

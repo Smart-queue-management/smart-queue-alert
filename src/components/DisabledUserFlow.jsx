@@ -125,7 +125,17 @@ function DisabledUserFlow() {
             validUntil: endOfDay,
             createdAt: now,
             schedulingMethod: 'manual',
-            visits: [],
+            visits: [{
+                id: 'visit-' + Date.now(),
+                department_id: (state.departments.find(d => d.name === formData.primaryDepartment) || {id: 'gen_med'}).id,
+                department: formData.primaryDepartment,
+                status: 'waiting',
+                sequence_order: 1,
+                room_counter: null,
+                doctorName: null,
+                notes: null,
+                timestamp: now
+            }],
             prescriptions: [],
             labTests: [],
             departmentAccess: allDepartmentNames

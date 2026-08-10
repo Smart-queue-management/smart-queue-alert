@@ -29,40 +29,41 @@ export function PublicDisplay() {
     return () => clearInterval(clockTimer);
   }, []);
 
-  // Text-To-Speech announcement trigger
+  // Text-To-Speech announcement trigger — visit-level, department-aware
   useEffect(() => {
     if (!soundEnabled) return;
 
-    // Search for any active token in 'called' status
-    const calledTokens = (state.tokens || []).filter(t => t.status === 'called');
+    const activeDepts = state.departments || [];
+    (state.tokens || []).forEach(token => {
+      (token.visits || []).forEach(visit => {
+        if (visit.status === 'called') {
+          const key = `${token.id}_${visit.department_id}_called`;
+          if (!spokenTokensRef.current.has(key)) {
+            spokenTokensRef.current.add(key);
 
-    calledTokens.forEach(token => {
-      const key = `${token.id}_called`;
-      // Announce only if not announced yet in this session
-      if (!spokenTokensRef.current.has(key)) {
-        spokenTokensRef.current.add(key);
+            const room = visit.room_counter || token.room_counter || '\u2014';
+            const tokenIdClean = token.id.split('-').pop() || token.id;
+            const text = room !== '\u2014'
+              ? `Token number ${tokenIdClean}, please proceed to ${room}`
+              : `Token number ${tokenIdClean}, you have been called`;
 
-        const room = token.room_counter || 'Room 101';
-        const tokenIdClean = token.id.split('-').pop() || token.id;
-        const text = `Token number ${tokenIdClean}, please proceed to ${room}`;
-
-        try {
-          if (Platform.OS === 'web') {
-            if ('speechSynthesis' in window) {
-              window.speechSynthesis.cancel();
-              const utterance = new SpeechSynthesisUtterance(text);
-              utterance.lang = 'en-US';
-              window.speechSynthesis.speak(utterance);
+            try {
+              if (Platform.OS === 'web') {
+                if ('speechSynthesis' in window) {
+                  const utterance = new SpeechSynthesisUtterance(text);
+                  utterance.lang = 'en-US';
+                  window.speechSynthesis.speak(utterance);
+                }
+              } else {
+                const Speech = require('expo-speech');
+                Speech.speak(text, { language: 'en-US' });
+              }
+            } catch (err) {
+              console.warn("TTS failed:", err);
             }
-          } else {
-            const Speech = require('expo-speech');
-            Speech.stop();
-            Speech.speak(text, { language: 'en-US' });
           }
-        } catch (err) {
-          console.log("TTS Announcement execution blocked or failed", err);
         }
-      }
+      });
     });
   }, [soundEnabled, state.tokens]);
 
@@ -152,7 +153,7 @@ export function PublicDisplay() {
                     <Text style={styles.servingTokenId}>{nowServingToken.id}</Text>
                     <View style={styles.roomBadge}>
                       <Text style={styles.roomText}>
-                        {nowServingToken.room_counter || 'Room 101'}
+                        {(() => { const av = (nowServingToken.visits || []).find(v => v.department_id === dept.id && v.status === 'called'); return av?.room_counter || nowServingToken.room_counter || '\u2014'; })()}
                       </Text>
                     </View>
                   </>
@@ -287,7 +288,7 @@ const styles = StyleSheet.create({
   },
   deptHeaderText: {
     color: "#fff",
-    fontSize: 16,
+    fontSize: 20,
     fontWeight: "800",
     letterSpacing: 0.5,
   },
@@ -303,13 +304,13 @@ const styles = StyleSheet.create({
   },
   servingLabel: {
     color: "#cbd5e1",
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: "800",
     marginBottom: 4,
   },
   servingTokenId: {
     color: "#fff",
-    fontSize: 32,
+    fontSize: 40,
     fontWeight: "900",
     letterSpacing: 1,
   },
