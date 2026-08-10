@@ -240,9 +240,8 @@ function TokenDisplay(_ref) {
                                                                  },
                                                                  children: (0, _jsxRuntime.jsxs)(_card.CardContent, {
                                                                      style: { padding: 18, alignItems: 'center' },
-                                                                     children: [
-                                                                         (0, _jsxRuntime.jsxs)(_reactNative.Text, { style: { fontSize: 32, fontWeight: '900', color: '#1e293b', marginBottom: 4 }, children: ["Token: ", token.id] }),
-                                                                         (0, _jsxRuntime.jsxs)(_reactNative.Text, { style: { fontSize: 16, fontWeight: '700', color: '#475569', marginBottom: 12 }, children: ["Current Department: ", currentDeptName] }),
+                                                                     children: [(0, _jsxRuntime.jsxs)(_reactNative.Text, { style: { fontSize: 32, fontWeight: '900', color: '#1e293b', marginBottom: 4 }, children: [(t.tokenId || "Token") + ": ", token.id] }),
+                                                                         (0, _jsxRuntime.jsxs)(_reactNative.Text, { style: { fontSize: 16, fontWeight: '700', color: '#475569', marginBottom: 12 }, children: [(t.primaryDepartment || "Current Department") + ": ", currentDeptName] }),
                                                                          tokenStatus === 'called' ? (0, _jsxRuntime.jsxs)(_jsxRuntime.Fragment, { children: [
                                                                              (0, _jsxRuntime.jsx)(_reactNative.Text, { style: { fontSize: 24, fontWeight: '900', color: '#16a34a', textAlign: 'center' }, children: "🟢 " + t.yourTurnTitle }),
                                                                              (0, _jsxRuntime.jsxs)(_reactNative.Text, { style: { fontSize: 18, fontWeight: 'bold', color: '#15803d', marginTop: 8, textAlign: 'center' }, children: [t.pleaseProceedTo, displayRoom || '\u2014'] })
@@ -273,8 +272,8 @@ function TokenDisplay(_ref) {
 
                                                                 (0, _jsxRuntime.jsxs)(_reactNative.View, { style: { alignItems: 'center', marginBottom: 8, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: '#f1f5f9' }, children: [/*#__PURE__*/
                                                                     (0, _jsxRuntime.jsx)(_lucideReactNative.HeartPulse, { size: 32, color: "#0ea5e9", style: { marginBottom: 8 } }),/*#__PURE__*/
-                                                                    (0, _jsxRuntime.jsx)(_reactNative.Text, { style: { fontSize: 20, fontWeight: 'bold', color: '#0f172a' }, children: "Medical Services" }),/*#__PURE__*/
-                                                                    (0, _jsxRuntime.jsx)(_reactNative.Text, { style: { fontSize: 13, color: '#64748b' }, children: "Official Patient Token" })]
+                                                                    (0, _jsxRuntime.jsx)(_reactNative.Text, { style: { fontSize: 20, fontWeight: 'bold', color: '#0f172a' }, children: t.pdTitle || "Medical Services" }),/*#__PURE__*/
+                                                                    (0, _jsxRuntime.jsx)(_reactNative.Text, { style: { fontSize: 13, color: '#64748b' }, children: t.reusableDay || "Official Patient Token" })]
                                                                 }
                                                                 ),/*#__PURE__*/
                                                         (0, _jsxRuntime.jsxs)(_reactNative.View, {
@@ -286,20 +285,20 @@ function TokenDisplay(_ref) {
                                                                     style: { gap: 8, marginTop: 4 }, children: [/*#__PURE__*/
                                                                         (0, _jsxRuntime.jsxs)(_reactNative.Text, {
                                                                             style: styles.detailText, children: [/*#__PURE__*/
-                                                                                (0, _jsxRuntime.jsx)(_reactNative.Text, { style: styles.detailLabel, children: "Name: " }),
+                                                                                (0, _jsxRuntime.jsx)(_reactNative.Text, { style: styles.detailLabel, children: (t.fullName || "Name") + ": " }),
                                                                                 (token.patient == null ? void 0 : token.patient.name) || 'N/A']
                                                                         }
                                                                         ),/*#__PURE__*/
                                                                         (0, _jsxRuntime.jsxs)(_reactNative.Text, {
                                                                             style: styles.detailText, children: [/*#__PURE__*/
-                                                                                (0, _jsxRuntime.jsx)(_reactNative.Text, { style: styles.detailLabel, children: "Phone: " }),
+                                                                                (0, _jsxRuntime.jsx)(_reactNative.Text, { style: styles.detailLabel, children: (t.phone || "Phone") + ": " }),
                                                                                 (token.patient == null ? void 0 : token.patient.phone) || 'N/A']
                                                                         }
                                                                         ),/*#__PURE__*/
                                                                         (0, _jsxRuntime.jsxs)(_reactNative.Text, {
                                                                             style: styles.detailText, children: [/*#__PURE__*/
-                                                                                (0, _jsxRuntime.jsxs)(_reactNative.Text, { style: styles.detailLabel, children: ["Age / Gender: "] }),
-                                                                                (token.patient == null ? void 0 : token.patient.age) || 'N/A', " / ", (token.patient == null ? void 0 : token.patient.gender) || 'N/A']
+                                                                                (0, _jsxRuntime.jsxs)(_reactNative.Text, { style: styles.detailLabel, children: [(t.ageLbl || "Age") + " / " + (t.genderLbl || "Gender") + ": "] }),
+                                                                                (token.patient == null ? void 0 : token.patient.age) || 'N/A', " / ", t[(token.patient == null ? void 0 : token.patient.gender)] || (token.patient == null ? void 0 : token.patient.gender) || 'N/A']
                                                                         }
                                                                         )]
                                                                 }
@@ -314,25 +313,25 @@ function TokenDisplay(_ref) {
                                                                     style: { gap: 8, marginTop: 4 }, children: [/*#__PURE__*/
                                                                         (0, _jsxRuntime.jsxs)(_reactNative.Text, {
                                                                             style: styles.detailText, children: [/*#__PURE__*/
-                                                                                (0, _jsxRuntime.jsx)(_reactNative.Text, { style: styles.detailLabel, children: "Token ID: " }),
+                                                                                (0, _jsxRuntime.jsx)(_reactNative.Text, { style: styles.detailLabel, children: (t.tokenId || "Token ID") + ": " }),
                                                                                 token.id]
                                                                         }
                                                                         ),/*#__PURE__*/
                                                                         (0, _jsxRuntime.jsxs)(_reactNative.Text, {
                                                                             style: styles.detailText, children: [/*#__PURE__*/
-                                                                                (0, _jsxRuntime.jsx)(_reactNative.Text, { style: styles.detailLabel, children: "Service: " }),/*#__PURE__*/
+                                                                                (0, _jsxRuntime.jsx)(_reactNative.Text, { style: styles.detailLabel, children: (t.pdSelectCategory || "Service") + ": " }),/*#__PURE__*/
                                                                                 (0, _jsxRuntime.jsx)(_reactNative.Text, { style: { textTransform: 'capitalize' }, children: token.type || 'N/A' })]
                                                                         }
                                                                         ),/*#__PURE__*/
                                                                         (0, _jsxRuntime.jsxs)(_reactNative.Text, {
                                                                             style: styles.detailText, children: [/*#__PURE__*/
-                                                                                (0, _jsxRuntime.jsx)(_reactNative.Text, { style: styles.detailLabel, children: "Department: " }),
+                                                                                (0, _jsxRuntime.jsx)(_reactNative.Text, { style: styles.detailLabel, children: (t.primaryDepartment || "Department") + ": " }),
                                                                                 token.primaryDepartment || 'N/A']
                                                                         }
                                                                         ),/*#__PURE__*/
                                                                         (0, _jsxRuntime.jsxs)(_reactNative.Text, {
                                                                             style: styles.detailText, children: [/*#__PURE__*/
-                                                                                (0, _jsxRuntime.jsx)(_reactNative.Text, { style: styles.detailLabel, children: "Time Slot: " }),/*#__PURE__*/
+                                                                                (0, _jsxRuntime.jsx)(_reactNative.Text, { style: styles.detailLabel, children: (t.timeSlotSelection || "Time Slot") + ": " }),/*#__PURE__*/
                                                                                 (0, _jsxRuntime.jsxs)(_reactNative.Text, {
                                                                                     style: { color: '#dc2626', fontWeight: 'bold' }, children: [
                                                                                         token.scheduledTime ? new Date(token.scheduledTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : new Date(token.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })]

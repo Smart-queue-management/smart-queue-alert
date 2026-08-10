@@ -289,7 +289,7 @@ function EmergencyUserFlow() {
                                 (0, _jsxRuntime.jsxs)(_card.CardTitle, {
                                     style: { flexDirection: 'row', alignItems: 'center' }, children: [/*#__PURE__*/
                                         (0, _jsxRuntime.jsx)(_lucideReactNative.User, { size: 20, style: { marginRight: 8 } }),/*#__PURE__*/
-                                        (0, _jsxRuntime.jsx)(_reactNative.Text, { children: "Medical Information" })]
+                                        (0, _jsxRuntime.jsx)(_reactNative.Text, { children: t.medicalInfo || "Medical Information" })]
                                 }
                                 )
                         }
@@ -298,16 +298,16 @@ function EmergencyUserFlow() {
                             style: { paddingTop: 0, gap: 16 }, children: [/*#__PURE__*/
                                 (0, _jsxRuntime.jsxs)(_reactNative.View, {
                                     children: [/*#__PURE__*/
-                                        (0, _jsxRuntime.jsx)(_label.Label, { children: "Name *" }),/*#__PURE__*/
+                                        (0, _jsxRuntime.jsx)(_label.Label, { children: (t.fullName || "Name") + " *" }),/*#__PURE__*/
                                         (0, _jsxRuntime.jsx)(_input.Input, {
                                             value: formData.name,
                                             onChangeText: function onChangeText(val) { return setFormData(Object.assign({}, formData, { name: val })); },
-                                            placeholder: "Enter patient name"
+                                            placeholder: t.fullNamePlaceholder || "Enter patient name"
                                         })]
                                 }),/*#__PURE__*/
                                 (0, _jsxRuntime.jsxs)(_reactNative.View, {
                                     children: [/*#__PURE__*/
-                                        (0, _jsxRuntime.jsx)(_label.Label, { children: "Age *" }),/*#__PURE__*/
+                                        (0, _jsxRuntime.jsx)(_label.Label, { children: (t.ageLbl || "Age") + " *" }),/*#__PURE__*/
                                         (0, _jsxRuntime.jsx)(_input.Input, {
                                             keyboardType: "numeric",
                                             value: formData.age ? String(formData.age) : '',
@@ -319,7 +319,7 @@ function EmergencyUserFlow() {
 
                                 (0, _jsxRuntime.jsxs)(_reactNative.View, {
                                     children: [/*#__PURE__*/
-                                        (0, _jsxRuntime.jsx)(_label.Label, { children: "Gender" }),/*#__PURE__*/
+                                        (0, _jsxRuntime.jsx)(_label.Label, { children: t.genderLbl || "Gender" }),/*#__PURE__*/
                                         (0, _jsxRuntime.jsx)(_reactNative.View, {
                                             style: styles.radioGroup, children:
                                                 ['male', 'female', 'other'].map(function (option) {
@@ -329,7 +329,7 @@ function EmergencyUserFlow() {
                                                         (0, _jsxRuntime.jsxs)(_reactNative.TouchableOpacity, {
                                                             onPress: function onPress() { return setFormData(Object.assign({}, formData, { gender: option })); }, style: styles.radioOption, children: [/*#__PURE__*/
                                                                 (0, _jsxRuntime.jsx)(RadioIcon, { size: 20, color: isSelected ? '#2563eb' : '#9ca3af' }),/*#__PURE__*/
-                                                                (0, _jsxRuntime.jsx)(_reactNative.Text, { style: styles.radioText, children: option.charAt(0).toUpperCase() + option.slice(1) })]
+                                                                (0, _jsxRuntime.jsx)(_reactNative.Text, { style: styles.radioText, children: t[option] || (option.charAt(0).toUpperCase() + option.slice(1)) })]
                                                         }, option
                                                         ));
 

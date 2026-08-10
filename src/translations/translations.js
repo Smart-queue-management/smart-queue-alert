@@ -152,7 +152,11 @@ export const translations = {
         publicTvDesc: "Hospital queue display",
         opsTitle: "Operations Overview",
         opsDesc: "Hospital queue analytics",
-        continueStaff: "Staff Dashboard"
+        continueStaff: "Staff Dashboard",
+        male: "Male",
+        female: "Female",
+        other: "Other",
+        generatingToken: "Generating token..."
     },
 
     hi: {
@@ -264,7 +268,11 @@ export const translations = {
         publicTvDesc: "अस्पताल कतार प्रदर्शन",
         opsTitle: "संचालन अवलोकन",
         opsDesc: "अस्पताल कतार विश्लेषण",
-        continueStaff: "स्टाफ डैशबोर्ड"
+        continueStaff: "स्टाफ डैशबोर्ड",
+        male: "पुरुष",
+        female: "महिला",
+        other: "अन्य",
+        generatingToken: "टोकन जनरेट हो रहा है..."
     },
 
     mr: {
@@ -391,7 +399,11 @@ export const translations = {
         publicTvDesc: "ఆసుపత్రి క్యూ డిస్‌ప్లే",
         opsTitle: "ఆపరేషన్స్ అవలోకనం",
         opsDesc: "ఆసుపత్రి క్యూ విశ్లేషణలు",
-        continueStaff: "స్టాఫ్ డ్యాష్‌బోర్డ్"
+        continueStaff: "స్టాఫ్ డ్యాష్‌బోర్డ్",
+        male: "పురుషుడు",
+        female: "స్త్రీ",
+        other: "ఇతర",
+        generatingToken: "టోకెన్ రూపొందించబడుతోంది..."
     },
 
     bn: {
