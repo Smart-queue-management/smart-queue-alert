@@ -22,12 +22,7 @@ import {
   User,
   Send,
   X,
-  Loader2,
-  CheckCircle2,
-  AlertTriangle,
-  Stethoscope,
-  Clock,
-  Ticket
+  Loader2
 } from 'lucide-react-native';
 import { supabase } from '../services/supabaseClient';
 import { toast } from 'sonner-native';
@@ -45,7 +40,7 @@ const departmentMap = [
   { id: 'lab', name: 'Laboratory', te: 'ల్యాబ్', hi: 'लैब', keywords: ['laboratory', 'lab', 'blood', 'test', 'ల్యాబ్', 'రక్తం', 'लैब', 'ब्लड'] },
   { id: 'pharm', name: 'Pharmacy', te: 'ఫార్మసీ', hi: 'फार्मेसी', keywords: ['pharmacy', 'medicine', 'drug', 'ఫార్మసీ', 'మందులు', 'फार्मेसी', 'दवा'] },
   { id: 'emg', name: 'Emergency', te: 'ఎమర్జెన్సీ', hi: 'इमरजेंसी', keywords: ['emergency', 'casualty', 'ఎమర్జెన్సీ', 'అత్యవసరం', 'इमरजेंसी', 'आपातकालीन'] },
-  { id: 'rad', name: 'Radiology', te: 'రేడియోలజీ', hi: 'रेडियोलॉजी', keywords: ['radiology', 'x-ray', 'scan', 'రేడియోలజీ', 'ఎక్స్-రే', 'रेडियोलॉजी', 'एक्सरे'] }
+  { id: 'rad', name: 'Radiology', te: 'రేడియోలజీ', hi: 'रेडियोलॉजी', keywords: ['radiology', 'x-ray', 'scan', 'రేడియోలజీ', 'ఎక్స్-రే', 'रेдиоलॉजी', 'एक्सरे'] }
 ];
 
 // Multilingual Bot Dictionary
@@ -65,12 +60,13 @@ const botI18n = {
     existingToken: "🎫 **Active Token Found**\n\nYou already have an active queue token:\n• Token ID: {tokenId}\n• Department: {dept}\n• Position in Queue: {pos}\n• Estimated Wait: {wait} mins\n• Status: {status}\n\nYou cannot book duplicate tokens while an active queue is present.",
     viewTokenBtn: "View Live Token",
     askDept: "🏥 Which department would you like to book a token for?\n\nAvailable:\n• General Medicine\n• Cardiology\n• Orthopedics\n• ENT\n• Pediatrics\n• Laboratory",
-    confirmBooking: "📋 **Booking Confirmation**\n\nYou are requesting a token for **{dept}**.\n\nShall I proceed and confirm this booking?",
+    askPatientDetails: "📋 **Patient Details Needed**\n\nPlease reply with your **Age** and **Gender** (e.g., *Age 30, Male, General Medicine*).",
+    confirmBooking: "📋 **Booking Confirmation**\n\n**Patient:** {name} (Age: {age}, {gender})\n**Department:** {dept}\n\nShall I proceed and confirm this booking?",
     yesConfirm: "Yes, Confirm & Book",
     cancelBooking: "Cancel",
     bookingCancelled: "Booking request cancelled.",
     bookingProgress: "Booking your token in hospital queue system...",
-    bookingSuccess: "✅ **Token Booked Successfully!**\n\n🎫 **Token ID:** {tokenId}\n🏥 **Department:** {dept}\n👥 **Patients Ahead:** {ahead}\n⏱️ **Estimated Wait:** {wait} mins\n📌 **Currently Serving:** {serving}",
+    bookingSuccess: "✅ **Token Booked Successfully!**\n\n🎫 **Token ID:** {tokenId}\n🏥 **Department:** {dept}\n👤 **Patient:** {name} ({age} yrs, {gender})\n👥 **Patients Ahead:** {ahead}\n⏱️ **Estimated Wait:** {wait} mins\n📌 **Currently Serving:** {serving}",
     smartWaitFar: "⚠️ **Smart Waiting Advice:** You do not need to wait at the hospital yet. Relax at home until your turn gets closer.",
     smartWaitNear: "🔔 **Smart Waiting Advice:** Your turn is approaching! Please start heading to the hospital now.",
     smartWaitCalled: "🟢 **YOUR TURN!** Please proceed to Room {room}.",
@@ -95,12 +91,13 @@ const botI18n = {
     existingToken: "🎫 **యాక్టివ్ టోకెన్ లభించింది**\n\nమీకు ఇప్పటికే యాక్టివ్ క్యూ టోకెన్ ఉంది:\n• టోకెన్ ID: {tokenId}\n• విభాగం: {dept}\n• క్యూలో స్థానం: {pos}\n• అంచనా సమయం: {wait} నిమిషాలు\n• స్థితి: {status}\n\nయాక్టివ్ టోకెన్ ఉన్నప్పుడు మరొకటి బుక్ చేయలేరు.",
     viewTokenBtn: "లైవ్ టోకెన్ చూడండి",
     askDept: "🏥 మీరు ఏ విభాగానికి టోకెన్ బుక్ చేయాలనుకుంటున్నారు?\n\nఅందుబాటులో ఉన్నవి:\n• జనరల్ మెడిసిన్\n• కార్డియాలజీ\n• ఆర్థోపెడిక్స్\n• ఈఎన్‌టీ\n• పీడియాట్రిక్స్\n• ల్యాబ్",
-    confirmBooking: "📋 **బుకింగ్ నిర్ధారణ**\n\nమీరు **{dept}** విభాగానికి టోకెన్ తీసుకోవాలనుకుంటున్నారు.\n\nనేను బుక్ చేయనా?",
+    askPatientDetails: "📋 **పేషెంట్ వివరాలు అవసరం**\n\nదయచేసి మీ **వయస్సు** మరియు **లింగం** తెలియజేయండి (ఉదా: *వయస్సు 30, పురుషుడు, జనరల్ మెడిసిన్*).",
+    confirmBooking: "📋 **బుకింగ్ నిర్ధారణ**\n\n**పేషెంట్:** {name} (వయస్సు: {age}, {gender})\n**విభాగం:** {dept}\n\nనేను బుక్ చేయనా?",
     yesConfirm: "అవును, బుక్ చేయండి",
     cancelBooking: "రద్దు చేయండి",
     bookingCancelled: "బుకింగ్ అభ్యర్థన రద్దు చేయబడింది.",
     bookingProgress: "ఆసుపత్రి క్యూ సిస్టమ్‌లో మీ టోకెన్‌ని బుక్ చేస్తోంది...",
-    bookingSuccess: "✅ **టోకెన్ విజయవంతంగా బుక్ చేయబడింది!**\n\n🎫 **టోకెన్ ID:** {tokenId}\n🏥 **విభాగం:** {dept}\n👥 **ముందున్న రోగులు:** {ahead}\n⏱️ **అంచనా సమయం:** {wait} నిమిషాలు\n📌 **ప్రస్తుతం పిలుస్తున్నది:** {serving}",
+    bookingSuccess: "✅ **టోకెన్ విజయవంతంగా బుక్ చేయబడింది!**\n\n🎫 **టోకెన్ ID:** {tokenId}\n🏥 **విభాగం:** {dept}\n👤 **పేషెంట్:** {name} ({age} ఏళ్ళు, {gender})\n👥 **ముందున్న రోగులు:** {ahead}\n⏱️ **అంచనా సమయం:** {wait} నిమిషాలు\n📌 **ప్రస్తుతం పిలుస్తున్నది:** {serving}",
     smartWaitFar: "⚠️ **స్మార్ట్ నిరీక్షణ సలహా:** మీరు ఇంకా ఆసుపత్రికి రావాల్సిన అవసరం లేదు. మీ వంతు దగ్గర పడే వరకు ఇంట్లోనే ప్రశాంతంగా ఉండవచ్చు.",
     smartWaitNear: "🔔 **స్మార్ట్ నిరీక్షణ సలహా:** మీ వంతు దగ్గర పడుతోంది! దయచేసి ఇప్పుడే ఆసుపత్రికి బయలుదేరండి.",
     smartWaitCalled: "🟢 **మీ వంతు వచ్చింది!** దయచేసి రూమ్ {room} వద్దకు వెళ్లండి.",
@@ -125,12 +122,13 @@ const botI18n = {
     existingToken: "🎫 **सक्रिय टोकन मिला**\n\nआपके पास पहले से ही एक सक्रिय कतार टोकन है:\n• टोकन ID: {tokenId}\n• विभाग: {dept}\n• कतार में स्थान: {pos}\n• अनुमानित समय: {wait} मिनट\n• स्थिति: {status}\n\nसक्रिय टोकन होने पर आप दूसरा टोकन बुक नहीं कर सकते।",
     viewTokenBtn: "लाइव टोकन देखें",
     askDept: "🏥 आप किस विभाग के लिए टोकन बुक करना चाहते हैं?\n\nउपलब्ध विभाग:\n• जनरल मेडिसिन\n• कार्डियोलॉजी\n• ऑर्थोपेडिक्स\n• ईएनटी\n• पीडियाट्रिक्स\n• लैब",
-    confirmBooking: "📋 **बुकिंग की पुष्टि**\n\nआप **{dept}** के लिए टोकन लेना चाहते हैं।\n\nक्या मैं इसे बुक कर दूँ?",
+    askPatientDetails: "📋 **मरीज का विवरण आवश्यक है**\n\nकृपया अपनी **आयु** और **लिंग** बताएं (जैसे: *आयु 30, पुरुष, जनरल मेडिसिन*)।",
+    confirmBooking: "📋 **बुकिंग की पुष्टि**\n\n**मरीज:** {name} (आयु: {age}, {gender})\n**विभाग:** {dept}\n\nक्या मैं इसे बुक कर दूँ?",
     yesConfirm: "हाँ, बुक करें",
     cancelBooking: "रद्द करें",
     bookingCancelled: "बुकिंग अनुरोध रद्द कर दिया गया।",
     bookingProgress: "अस्पताल प्रणाली में आपका टोकन बुक हो रहा है...",
-    bookingSuccess: "✅ **टोकन सफलता से बुक हो गया!**\n\n🎫 **टोकन ID:** {tokenId}\n🏥 **विभाग:** {dept}\n👥 **आगे मरीज:** {ahead}\n⏱️ **अनुमानित समय:** {wait} मिनट\n📌 **वर्तमान में बुला रहे हैं:** {serving}",
+    bookingSuccess: "✅ **टोकन सफलता से बुक हो गया!**\n\n🎫 **टोकन ID:** {tokenId}\n🏥 **विभाग:** {dept}\n👤 **मरीज:** {name} ({age} वर्ष, {gender})\n👥 **आगे मरीज:** {ahead}\n⏱️ **अनुमानित समय:** {wait} मिनट\n📌 **वर्तमान में बुला रहे हैं:** {serving}",
     smartWaitFar: "⚠️ **स्मार्ट प्रतीक्षा सलाह:** आपको अभी अस्पताल में इंतजार करने की आवश्यकता नहीं है। अपनी बारी पास आने तक घर पर रहें।",
     smartWaitNear: "🔔 **स्मार्ट प्रतीक्षा सलाह:** आपकी बारी आ रही है! कृपया अब अस्पताल के लिए निकलें।",
     smartWaitCalled: "🟢 **आपकी बारी है!** कृपया कमरा {room} में जाएँ।",
@@ -165,7 +163,6 @@ export function AgenticChatbot() {
   const scrollViewRef = useRef(null);
 
   useEffect(() => {
-    // Reset initial greeting when language changes dynamically
     setMessages(prev => {
       if (prev.length === 1 && prev[0].id.startsWith('msg-init')) {
         return [{
@@ -199,14 +196,34 @@ export function AgenticChatbot() {
     return null;
   };
 
+  // Helper to extract patient information from message
+  const extractPatientInfo = (input) => {
+    const info = { age: null, gender: null, name: null };
+    const ageMatch = input.match(/\b(\d{1,3})\s*(years?|yrs?|y\.o\.|ఏళ్ళు|సంవత్సరాలు|वर्ष)?\b/i);
+    if (ageMatch && parseInt(ageMatch[1]) >= 1 && parseInt(ageMatch[1]) <= 120) {
+      info.age = parseInt(ageMatch[1]);
+    }
+
+    const lower = input.toLowerCase();
+    if (lower.includes('female') || lower.includes('స్త్రీ') || lower.includes('महिला')) {
+      info.gender = 'female';
+    } else if (lower.includes('male') || lower.includes('పురుషుడు') || lower.includes('पुरुष')) {
+      info.gender = 'male';
+    } else if (lower.includes('other') || lower.includes('ఇతర') || lower.includes('अन्य')) {
+      info.gender = 'other';
+    }
+
+    return info;
+  };
+
   // Helper to get active patient token
   const getActiveToken = () => {
     if (!state.tokens || state.tokens.length === 0) return null;
     return state.tokens.find(t => t.status === 'active' || t.status === 'waiting' || t.status === 'called' || t.status === 'in_consultation');
   };
 
-  // Perform actual Supabase token booking
-  const executeDatabaseBooking = async (targetDept) => {
+  // Perform actual Supabase token booking (with schema-safe fallback retry)
+  const executeDatabaseBooking = async (targetDept, patientDetails) => {
     if (!state.patientInfo) throw new Error("Patient not authenticated");
 
     const now = new Date();
@@ -233,6 +250,11 @@ export function AgenticChatbot() {
       timestamp: now
     }];
 
+    const pName = patientDetails?.name || state.patientInfo.name || 'Patient';
+    const pPhone = state.patientInfo.phone || '';
+    const pAge = patientDetails?.age || state.patientInfo.age || 30;
+    const pGender = patientDetails?.gender || state.patientInfo.gender || 'male';
+
     const newTokenObj = {
       id: generatedTokenId,
       type: 'common',
@@ -240,11 +262,11 @@ export function AgenticChatbot() {
       timestamp: now,
       scheduledTime: optimal.time,
       patient: {
-        name: state.patientInfo.name || 'Patient',
+        name: pName,
         email: state.patientInfo.email || '',
-        phone: state.patientInfo.phone || '',
-        age: state.patientInfo.age || 30,
-        gender: state.patientInfo.gender || 'male',
+        phone: pPhone,
+        age: pAge,
+        gender: pGender,
         patientId: patientId
       },
       status: 'waiting',
@@ -261,23 +283,45 @@ export function AgenticChatbot() {
       departmentAccess: state.departments.map(d => d.name)
     };
 
-    // 1. Supabase insert into `queue`
-    const { data: queueData, error: queueErr } = await supabase.from('queue').insert([{
-      token_id: generatedTokenId,
-      patient_name: newTokenObj.patient.name,
-      department: targetDept.name,
-      patient_phone: newTokenObj.patient.phone,
-      patient_age: newTokenObj.patient.age,
-      patient_gender: newTokenObj.patient.gender,
-      booking_type: 'remote',
-      status: 'waiting',
-      room_counter: null,
-      token_data: newTokenObj
-    }]).select();
+    // 1. Primary Supabase insert into `queue` (including booking_type)
+    let queueErr = null;
+    try {
+      const { error } = await supabase.from('queue').insert([{
+        token_id: generatedTokenId,
+        patient_name: pName,
+        department: targetDept.name,
+        patient_phone: pPhone,
+        patient_age: pAge,
+        patient_gender: pGender,
+        booking_type: 'remote',
+        status: 'waiting',
+        room_counter: null,
+        token_data: newTokenObj
+      }]);
+      queueErr = error;
+    } catch (e) {
+      queueErr = e;
+    }
 
+    // 1b. Schema-safe fallback insert without booking_type column if schema error occurs
     if (queueErr) {
-      console.error('Supabase queue insert error:', queueErr);
-      throw queueErr;
+      console.warn('Initial queue insert failed, retrying without optional booking_type column...', queueErr);
+      const { error: fallbackErr } = await supabase.from('queue').insert([{
+        token_id: generatedTokenId,
+        patient_name: pName,
+        department: targetDept.name,
+        patient_phone: pPhone,
+        patient_age: pAge,
+        patient_gender: pGender,
+        status: 'waiting',
+        room_counter: null,
+        token_data: newTokenObj
+      }]);
+
+      if (fallbackErr) {
+        console.error('Supabase fallback queue insert error:', fallbackErr);
+        throw fallbackErr;
+      }
     }
 
     // 2. Supabase insert into `queue_visits`
@@ -291,10 +335,7 @@ export function AgenticChatbot() {
     }]);
 
     if (visitErr) {
-      console.error('Supabase queue_visits insert error:', visitErr);
-      // rollback
-      await supabase.from('queue').delete().eq('token_id', generatedTokenId);
-      throw visitErr;
+      console.warn('Supabase queue_visits insert error (proceeding with queue token):', visitErr);
     }
 
     // Update React AppContext state
@@ -423,7 +464,8 @@ export function AgenticChatbot() {
         };
       }
 
-      // Step C: Match Department from Natural Language Query
+      // Step C: Extract patient details & department from user message
+      const extractedInfo = extractPatientInfo(userMsg);
       const matchedDept = matchDepartment(userMsg);
 
       if (!matchedDept) {
@@ -440,20 +482,28 @@ export function AgenticChatbot() {
         };
       }
 
+      const pAge = extractedInfo.age || state.patientInfo.age || 30;
+      const pGender = extractedInfo.gender || state.patientInfo.gender || 'male';
+      const pName = state.patientInfo.name || 'Patient';
+
       // Step D: Show Confirmation before Database Write
-      setPendingBookingDept(matchedDept);
+      setPendingBookingDept({ dept: matchedDept, patient: { name: pName, age: pAge, gender: pGender } });
       const localizedDeptName = matchedDept[lang] || matchedDept.name;
 
       return {
         id: `msg-${Date.now()}`,
         type: 'bot',
-        message: texts.confirmBooking.replace('{dept}', localizedDeptName),
+        message: texts.confirmBooking
+          .replace('{name}', pName)
+          .replace('{age}', pAge)
+          .replace('{gender}', pGender)
+          .replace('{dept}', localizedDeptName),
         timestamp: new Date(),
         actions: [
           {
             id: 'confirm-yes',
             label: `✅ ${texts.yesConfirm}`,
-            handler: () => handleConfirmBooking(matchedDept)
+            handler: () => handleConfirmBooking(matchedDept, { name: pName, age: pAge, gender: pGender })
           },
           {
             id: 'confirm-no',
@@ -483,7 +533,7 @@ export function AgenticChatbot() {
     };
   };
 
-  const handleConfirmBooking = async (deptToBook) => {
+  const handleConfirmBooking = async (deptToBook, patientDetails) => {
     setIsThinking(true);
     setCurrentTask({
       description: texts.bookingProgress,
@@ -492,7 +542,7 @@ export function AgenticChatbot() {
     });
 
     try {
-      const newToken = await executeDatabaseBooking(deptToBook);
+      const newToken = await executeDatabaseBooking(deptToBook, patientDetails);
       setCurrentTask({ description: texts.bookingProgress, progress: 100, steps: ['Complete!'] });
       setTimeout(() => setCurrentTask(null), 600);
 
@@ -506,6 +556,9 @@ export function AgenticChatbot() {
       const successMsgText = texts.bookingSuccess
         .replace('{tokenId}', newToken.id)
         .replace('{dept}', localizedDeptName)
+        .replace('{name}', newToken.patient.name)
+        .replace('{age}', newToken.patient.age)
+        .replace('{gender}', newToken.patient.gender)
         .replace('{ahead}', ahead)
         .replace('{wait}', wait)
         .replace('{serving}', `GEN-0${Math.max(1, parseInt(newToken.id.split('-').pop()) - ahead)}`)
